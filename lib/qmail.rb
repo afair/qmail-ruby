@@ -60,6 +60,10 @@ module Qmail
     @qmessage.maildrop(dir)
   end
 
+  def log(level, *data)
+    return unless Qmail::Config.logger
+    Qmail::Config.logger(level, *data)
+  end
 
   ERRORS = {
     -1 => "Unknown Error",
