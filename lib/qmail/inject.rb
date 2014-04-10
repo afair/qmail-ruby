@@ -1,54 +1,95 @@
 module Qmail
 
   # The Qmail::Inject class inserts a message into the queue
+  # The name comes from the qmail-inject command. It spawns
+  # off qmail-queue and writes the message and envelope into
+  # its designated file handles.
+  #
+  # Qmail-queue Protocol: 
+  # 1. Reads mail message from File Descriptor 0 until closed
+  # 2. reads Envelope from FD 1. Envelope Stream:
+  #    * "F" + sender_email + "\0" 
+  #    * "T" + recipient_email + "\0" (for each recipient)
+  #    * Final "\0" to signal end of recipients.
+  #
   class Inject
-    attr_accessor :message, :return_path, :recipients, :options
+    include Process
 
-    # Single-step processor
-    def self.queue(message, return_path, recipients, options={})
-      inject = Qmail::Inject.new(message, return_path, recipients, options)
+    # Single-step processor. Takes an instance of Qmail::Message
+    def self.sendmail(qmail_message)
+      inject = Qmail::Inject.new(qmail_message)
       inject.sendmail
     end
 
-    def initialize(message, return_path, recipients, options={})
-      self.message     = message
-      self.return_path = return_path
-      self.recipients  = recipients
-      self.options     = options
+    def initialize(qmail_message)
+      @qmsg = qmessage
+    end
+    
+    # This calls the Qmail-Queue program, so requires qmail to be installed (does not require it to be currently running).
+    def sendmail
+      run_qmail_queue() do |msg, env|
+        # Send the Message
+        @message.each { |m| msg.puts(m) }
+        msg.puts @qmsg.message
+        msg.close
 
-      self.mailfile(options[:mailfile])             if options[:mailfile]
-      self.recipient_file(options[:recipient_file]) if options[:recipient_file]
+        env.write('F' + @qmsg.return_path + "\0")
+        @qmsg.recipients.each { |r| env.write('T' + r + "\0") }      
+        env.write("\0") # End of "file"
+      end
+
+      logmsg = "RubyQmail Queue exited:#{@success} #{qmail_queue_error_message(@success)}"
+      @qmsg.options[:logger].info(logmsg) if @qmsg.options[:logger]
+      @success == Qmail::QMAIL_QUEUE_SUCCESS
+    end
+    
+    def qmail_queue_error_message(code) #:nodoc:
+      "RubyQmail::Queue Error #{code}:" + Qmail::QMAIL_ERRORS.has_key?(code) ?
+         Qmail::QMAIL_ERRORS[code]:Qmail::QMAIL_ERRORS[-1]
     end
 
-    # Loads message in Mailfile format
-    def mailfile(filename)
-      File.open(filename) do |f|
-        while (rec = f.readline.chomp) > ""
-          if rec =~ /\AMailfile (.+)/
-            parse_options
-          elsif self.return_path.nil? or self.return_path == ""
-            self.return_path = rec
-          else
-            self.recipients.push(rec)
-          end
-        end
-        self.message = f.read
-      end
-    end
+    # Forks, sets up stdin and stdout pipes, and starts qmail-queue. 
+    # If a block is passed, yields to it with [sendpipe, receivepipe], 
+    # and returns the exist cod, otherwise returns {:msg=>pipe, :env=>pipe, :pid=>@child}
+    # It exits 0 on success or another code on failure. 
+    def run_qmail_queue(command=nil, &block)
+      # Set up pipes and qmail-queue child process
+      msg_read, msg_write = IO.pipe
+      env_read, env_write = IO.pipe
+      @child=fork # child? nil : childs_process_id
 
-    # Parses "--option=value" formats, puts in options
-    def parse_options(str)
-      while m = str.match(/\A\s*--(\w+)[=\s]+(.+?)(--.+)?/)
-        self.options[m[1].to_sym] = m[2]
-        str = m[3]
-      end
-    end
+      unless @child 
+        ## Set child's stdin(0) to read from msg
+        $stdin.close # FD=0
+        msg_read.dup
+        msg_read.close
+        msg_write.close
 
-    def recipient_file(filename)
-      File.readlines(filename).each do |rec|
-        self.recipients.push($1) if rec =~ /\A\s*(\S+@\S)/
+        ## Set child's stdout(1) to read from env
+        $stdout.close # FD=1
+        env_read.dup
+        env_read.close
+        env_write.close
+
+        # Change directory and load command
+        Dir.chdir(@options[:qmail_root])
+        exec( command || @options[:qmail_queue] )
+        raise "Exec qmail-queue failed"
       end
+
+      # Parent Process with block
+      if block_given?
+        yield(msg_write, env_write)
+        env_write.close
+        wait(@child)
+        @success = $? >> 8
+        return @sucess
+      end
+      
+      # Parent process, no block
+      {:msg=>msg_write, :env=>env_write, :pid=>@child}
     end
 
   end
+
 end

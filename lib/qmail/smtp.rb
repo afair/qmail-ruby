@@ -1,36 +1,47 @@
 module Qmail
 
   # Sends Email via SMTP using the qmail-remote command
-  class QmailRemote
+  # Usage:
+  #   Qmail::SMTP.sendmail(qmail_message)
+  #
+  #   - qmail_message is Qmail::Message.new(message, return_path, recipients, options)
+  #
+  class SMTP
+
+    def self.sendmail(qmail_message)
+      Qmail::SMTP.new(qmail_message).sendmail
+    end
+
+    def initialize(qmail_message)
+      @qmsg = qmail_message
+    end
 
     # Sends email directly via qmail-remote. It does not store in the queue, It will halt the process
     # and wait for the network event to complete. If multiple recipients are passed, it will run
     # qmail-remote delivery for each at a time to honor VERP return paths.
-    def run(return_path=nil, recipients=nil, message=nil, *options)
-      parameters(return_path, recipients, message, options)
-      rp1, rp2 = @return_path.split(/@/,2)
-      rp = @return_path
-      @recipients.each do |recip|
-        unless @options[:noverp]
+    def sendmail
+      rp1, rp2 = @qmsg.return_path.split(/@/,2)
+      rp = @qmsg.return_path
+      @qmsg.recipients.each do |recip|
+        unless @qmsg.options[:noverp]
           mailbox, host = recip.split(/@/)
           rp = "#{rp1}#{mailbox}=#{host}@#{rp2}"
         end
 
-        @message.rewind if @message.respond_to?(:rewind)
-        cmd = "#{@options[:qmail_root]}+/bin/qmail-remote #{host} #{rp} #{recip}"
+        cmd = "#{@qmsg.options[:qmail_root]}+/bin/qmail-remote #{host} #{rp} #{recip}"
         @success = self.spawn_command(cmd) do |send, recv|
-          @message.each { |m| send.puts m }
+          send.puts @qmsg.message
           send.close
           @response = recv.readpartial(1000)
         end
 
-        @options[:logger].info("RubyQmail Remote #{recip} exited:#{@success} responded:#{@response}")
+        #@options[:logger].info("RubyQmail Remote #{recip} exited:#{@success} responded:#{@response}")
       end
       return [ @success, @response ] # Last one
     end
 
     # Forks, sets up stdin and stdout pipes, and starts the command. 
-    # IF a block is passed, yeilds to it with [sendpipe, receivepipe], 
+    # IF a block is passed, yields to it with [sendpipe, receivepipe], 
     # returing the exit code, otherwise returns {:send=>, :recieve=>, :pid=>}
     # qmail-queue does not work with this as it reads from both pipes.
     def spawn_command(command, &block)

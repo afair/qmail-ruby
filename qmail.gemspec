@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = Qmail::VERSION
   spec.authors       = ["Allen Fair"]
   spec.email         = ["allen.fair@gmail.com"]
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
+  spec.summary       = %q{Implements Qmail client interfaces in Ruby}
+  spec.description   = %q{The qmail gem gives interfaces to send mail with Qmail via queue, QMQP, and SMTP. }
   spec.homepage      = ""
   spec.license       = "MIT"
 
