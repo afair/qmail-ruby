@@ -1,10 +1,12 @@
-require "qmail/version"
+require "qmail/config"
+require "qmail/http"
+require "qmail/inject"
+require "qmail/maildrop"
 require "qmail/message"
 require "qmail/netstring"
-require "qmail/inject"
-require "qmail/smtp"
 require "qmail/qmqp"
-require "qmail/qmail_queue"
+require "qmail/smtp"
+require "qmail/version"
 
 # The Qmail module implements Qmail interation functions, usually as a client.
 # It is not intended to replace the full MTA.
@@ -21,14 +23,14 @@ module Qmail
   #      options     - A hash of directives to control the queueing.
   #
   # Options:
-  #      method: "queue|qmqp|smtp|maildrop" 
+  #      method: "queue|qmqp|smtp|maildrop"
   #        - Sends the qmail using one of these commands adhering to qmail-queue
   #      ip: "127.0.0.1"
   #      port: 630
   #        - Ip address and port for QMQP (630) or SMTP (25) Communication
   #        - qmail-qmqpc takes its default ip address from qmail/controls/qmqpservers.
   #      recipient_file: "/path/file"
-  #        - If specified, it adds recipient addresses, one per line, from that file. 
+  #        - If specified, it adds recipient addresses, one per line, from that file.
   #      headers: true
   #        - Loads return path from message From header, recipients from To, CC, Bcc
   #          headers. It will then delete the Bcc header from the message.
@@ -49,7 +51,7 @@ module Qmail
   #      maildrop_dir: dirname
   #        - Directory for maildrop operations. Failed sendmails can also be
   #          archived here for retry processing.
-  #   
+  #
   def sendmail(message, return_path=nil, recipients=[], *args)
     @qmessage = Qmail::Message.new(message, return_path=nil, recipients=[], *args)
     @qmessage.sendmail
@@ -62,7 +64,7 @@ module Qmail
 
   def log(level, *data)
     return unless Qmail::Config.logger
-    Qmail::Config.logger(level, *data)
+    Qmail::Config.logger.send(level, *data)
   end
 
   ERRORS = {

@@ -1,4 +1,5 @@
 require 'digest/md5'
+require 'json'
 
 module Qmail
   # Constructs a Qmail Queue Message Oject. It is used as a standard interface
@@ -28,9 +29,11 @@ module Qmail
     attr_accessor :message, :return_path, :recipients, :options
 
     def initialize(message='', return_path=nil, recipients=[], *args)
-      options = args.last.is_a?(Hash) ? args.pop : {}
-      recipients = Array(recipients) unless recipients.is_a?(Array)
-      recipients.push(*args) if args.size > 0
+      self.options     = args.last.is_a?(Hash) ? args.pop : {}
+      self.message     = message
+      self.return_path = return_path
+      self.recipients  = Array(recipients) unless recipients.is_a?(Array)
+      self.recipients.push(*args) if args.size > 0
       self.mailfile(options[:mailfile])             if options[:mailfile]
       self.recipient_file(options[:recipient_file]) if options[:recipient_file]
       use_headers                                   if options[:headers]
@@ -38,7 +41,7 @@ module Qmail
 
     def use_headers
       h = message_headers
-      self.return_path = h[:from]
+      self.return_path = addresses(h[:from]).first
       recips =  []
       [:to, :cc, :bcc].each do |hdr|
         recips << addresses(h[hdr])
@@ -61,7 +64,7 @@ module Qmail
 
     def sendmail(method=nil)
       method ||= self.options[:method] || :queue
-      send(method) if %i(queue qmqp smtp maildrop).include?(method)
+      send(method) if %i(queue qmqp smtp maildrop http).include?(method)
     end
 
     def queue
@@ -95,7 +98,7 @@ module Qmail
       nstr = Qmail::Netstring.of(self.message+"\n")
       nstr += Qmail::Netstring.of(self.return_path)
       self.recipients.each { |r| nstr += Qmail::Netstring.of(r) }
-      nstr
+      Qmail::Netstring.of(nstr)
     end
 
     def to_md5
@@ -103,11 +106,21 @@ module Qmail
                             self.recipients.join(' '))
     end
 
+    def to_json
+      {message:self.message, return_path:self.return_path,
+       recipients:self.recipients}.to_json
+    end
+
     private
 
     def addresses(str)
       a = []
-      str.split(/([\w\.\=\-\+]+\@[\w\-\.]+\w)/).each {|e| a << e if e =~/@/ }
+      return a unless str
+      #str.split(/([\w\.\=\-\+]+\@[\w\-\.]+\w)/).each {|e| a << e if e =~/@/ }
+      while m = str.match(/\A.*?([\w\.\=\-\+]+\@[\w\-\.]+\w)(.*)/)
+        a << m[1]
+        str = m[2]
+      end
       a
     end
   end
