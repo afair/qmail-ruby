@@ -1,5 +1,5 @@
 module Qmail
-  
+
   # Transfers a message to another mail server using Qmail's QMQP protocol.
   #   http://cr.yp.to/proto/qmqp.html
   #
@@ -34,9 +34,9 @@ module Qmail
         port = @qmsg.options[:port] || 628
         socket = TCPSocket.new(ip, @options[:port])
         raise "QMQP can not connect to #{ip}:#{port}" unless socket
-        
+
         socket.send(@qmsg.to_netstring, 0)
-        parse_qmail_response(socket.recv(1000))
+        @response = socket.recv(1000)
         logmsg = "RubyQmail QMQP [#{ip}:#{@options[:port]}]: #{@response} return:#{@success}"
         @qmsg.options[:logger].info(logmsg) if @qmsg.options[:logger]
         {sucess:@sucess, qmail_id:@email_msgid, response:@response}
@@ -48,6 +48,7 @@ module Qmail
       ensure
         socket.close if socket
       end
+      Qmail::Result.new(@qmsg, :qmqp, @success, @response, "#{ip}:#{port}")
     end
 
     def qmqp_server(i=0)
@@ -57,24 +58,6 @@ module Qmail
       File.readlines(filename)[i].chomp
     end
 
-    # "23:Kok 1182362995 qp 21894," (it's a netstring)
-    def parse_qmail_response(response)
-      m =  response.match(/\A\d+:([KZD]) (.+) qp (.+)/)
-      success = false
-      case m[1]
-      when 'K'
-        sucess = true
-      when 'Z' # Deferral, try again later
-        sucess = nil
-      when 'D'
-        sucess = false
-      else false
-      end
-
-      @response = response
-      @qmail_msgid = m[3]
-      @success = success
-    end
   end
 
 end

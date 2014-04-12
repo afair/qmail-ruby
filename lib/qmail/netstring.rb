@@ -19,8 +19,16 @@ module Qmail
   # UTF-8 (Unicode) or 8-bit extensions (ISP-8851-x).
 
   class Netstring
+
+    # Encodes the given string as a netstring
     def self.of(str)
        "#{str.size}:#{str},"
+    end
+
+    # Returns the string encoded within a netstring, or returns original
+    # if not a netstring
+    def self.value(str)
+      str =~ /\A(\d+):(.*),\z/ ? $1 : str
     end
   end
 end

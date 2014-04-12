@@ -1,11 +1,11 @@
 require_relative 'test_helper'
 
-class TestQmail
+class TestQmail < MiniTest::Test
 
-  def test_queue
-    m = Qmail.sendmail('Subject', 'from@example.com', 'recip@example.com')
+  def test_sendmail
+    m = Qmail::sendmail(basic_email, 'me@example.com', 'you@example.com')
     p m.inspect
-    assert_equal "Subjectx", m.message
+    assert_equal true, m.failed?
   end
 
 end

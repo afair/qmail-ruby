@@ -1,6 +1,14 @@
 module Qmail
+
+  # Qmail::Config - Stores and Retries Configuration Settings
+  # Usage:
+  #   Qmail::Config.setting = "value"
+  #   do_somthing() if Qmail::Config.setting == "value"
   class Config
-    @options = {}
+    @options = {
+      qmail_dir:   "/var/qmail",
+      qmail_queue:  "/var/qmail/bin/qmail-queue",
+    }
 
     def self.options
       @options
@@ -10,7 +18,12 @@ module Qmail
       instance_eval ### In progress
     end
 
-
-
+    def self.method_missing(method, *args, &block)
+      if args.size>0
+        @options[method] = args.shift
+      else
+        @options[method]
+      end
+    end
   end
 end

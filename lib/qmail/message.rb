@@ -68,15 +68,15 @@ module Qmail
     end
 
     def queue
-      Qmail::Inject.sendmail(self.message, self.return_path, self.recipients, self.options)
+      Qmail::Inject.sendmail(self)
     end
 
     def qmqp
-      Qmail::QMQP.sendmail(self.message, self.return_path, self.recipients, self.options)
+      Qmail::QMQP.sendmail(self)
     end
 
     def smtp
-      Qmail::SMTP.sendmail(self.message, self.return_path, self.recipients, self.options)
+      Qmail::SMTP.sendmail(self)
     end
 
     def maildrop(dir=nil)
@@ -109,6 +109,10 @@ module Qmail
     def to_json
       {message:self.message, return_path:self.return_path,
        recipients:self.recipients}.to_json
+    end
+
+    def to_s
+      [self.return_path, *self.recipients, "", self.message].join("\n")
     end
 
     private

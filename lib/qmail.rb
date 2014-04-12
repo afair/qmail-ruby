@@ -5,6 +5,7 @@ require "qmail/maildrop"
 require "qmail/message"
 require "qmail/netstring"
 require "qmail/qmqp"
+require "qmail/result"
 require "qmail/smtp"
 require "qmail/version"
 
@@ -52,24 +53,38 @@ module Qmail
   #        - Directory for maildrop operations. Failed sendmails can also be
   #          archived here for retry processing.
   #
-  def sendmail(message, return_path=nil, recipients=[], *args)
-    @qmessage = Qmail::Message.new(message, return_path=nil, recipients=[], *args)
+  def self.sendmail(*message_args)
+    @qmessage = Qmail::Message.new(*message_args)
     @qmessage.sendmail
   end
 
-  def maildrop(dir, *args)
-    @qmessage = Qmail::Message.new(*args)
+  def self.maildrop(dir, *message_args)
+    @qmessage = Qmail::Message.new(*message_args)
     @qmessage.maildrop(dir)
   end
 
-  def log(level, *data)
+  def self.log(level, *data)
     return unless Qmail::Config.logger
     Qmail::Config.logger.send(level, *data)
   end
 
+  # These are process exit codes for Qmail delivery processing (see qmail-local)
+  EXIT_ERROR           = 1..98
+  EXIT_PERMANENT_ERROR = 11..40
+  EXIT_STOP            = 99     # Stop further  processing, mark as done
+  EXIT_DEFER           = 111    # Delivery Should Retry
+  EXIT_OK              = 0      # Delivery successful
+
+  DELIVERY_STATUS = {
+    'k' => 0,                   # Success
+    'd' => 1,                   # Failed or Queue Timeout
+    'z' => EXIT_DEFER,          # Deferred, retry later
+  }
+
+  # These are Qmail queueing errors
   ERRORS = {
-    -1 => "Unknown Error",
     0  => "Success",
+    1  => "Unknown Error",
     11 => "Address too long",
     31 => "Mail server permanently refuses to send the message to any recipients.",
     51 => "Out of memory.",
@@ -87,7 +102,7 @@ module Qmail
     71 => "Mail server temporarily refuses to send the message to any recipients.",
     72 => "Connection to mail server timed out.",
     73 => "Connection to mail server rejected. ",
-    74 => "Connection to mail server  succeeded,  but  communication  failed.",
+    74 => "Connection to mail server succeeded, but communication failed.",
     81 => "Internal bug; e.g., segmentation fault.",
     91 => "Envelope format error"
   }
