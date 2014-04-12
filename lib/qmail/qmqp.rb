@@ -28,23 +28,18 @@ module Qmail
     # System defaults will be used if no ip or port given.
     # Returns true on success, false on failure (see @response), or nul on deferral
     def sendmail(qmail_msg=nil)
-      @qmsg = qmail_message if qmail_message
+      @qmsg    = qmail_message if qmail_message
       begin
-        ip   = @qmsg.options[:ip] || qmqp_server
-        port = @qmsg.options[:port] || 628
+        ip     = @qmsg.options[:ip] || qmqp_server
+        port   = @qmsg.options[:port] || 628
         socket = TCPSocket.new(ip, @options[:port])
-        raise "QMQP can not connect to #{ip}:#{port}" unless socket
+        if socket
+          socket.send(@qmsg.to_netstring, 0)
+          @response = socket.recv(1000)
+        end
 
-        socket.send(@qmsg.to_netstring, 0)
-        @response = socket.recv(1000)
-        logmsg = "RubyQmail QMQP [#{ip}:#{@options[:port]}]: #{@response} return:#{@success}"
-        @qmsg.options[:logger].info(logmsg) if @qmsg.options[:logger]
-        {sucess:@sucess, qmail_id:@email_msgid, response:@response}
-
-      rescue Exception => e
-        @options[:logger].error( "QMQP can not connect to #{@opt[:qmqp_ip]}:#{@options[:qmqp_port]} #{e}" )
-        raise e
-
+      rescue Exception
+        continue
       ensure
         socket.close if socket
       end

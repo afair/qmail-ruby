@@ -27,7 +27,7 @@ module Qmail
 
     # This calls the Qmail-Queue program, so requires qmail to be installed (does not require it to be currently running).
     def sendmail
-      run_qmail_queue() do |msg, env|
+      run_qmail_queue(Qmail::Config.qmail_queue) do |msg, env|
         # Send the Message
         msg.puts @qmsg.message
         msg.close
@@ -37,12 +37,7 @@ module Qmail
         env.write("\0") # End of "file"
       end
 
-      Qmail::Result.new(@qmsg, :queue, @success)
-    end
-
-    def qmail_queue_error_message(code) #:nodoc:
-      "RubyQmail::Queue Error #{code}:" + Qmail::ERRORS.has_key?(code) ?
-         Qmail::ERRORS[code]:Qmail::ERRORS[-1]
+      Qmail::Result.new(@qmsg, :queue, @exit_code)
     end
 
     # Forks, sets up stdin and stdout pipes, and starts qmail-queue.
@@ -79,12 +74,9 @@ module Qmail
         yield(msg_write, env_write)
         env_write.close
         wait(@child)
-        @success = $? >> 8
-        return @sucess
+        @exit_code = $? >> 8
+        return @exit_code
       end
-
-      # Parent process, no block
-      {:msg=>msg_write, :env=>env_write, :pid=>@child}
     end
 
   end
