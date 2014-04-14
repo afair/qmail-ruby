@@ -47,7 +47,7 @@ module Qmail
         recips << addresses(h[hdr])
       end
       self.recipients = recips.flatten
-      ## self.message.gsub("Bcc", '')
+      remove_bcc_header
     end
 
     def message_headers
@@ -61,6 +61,12 @@ module Qmail
       headers
     end
 
+    def remove_bcc_header
+      head, body   = self.message.split(/\n\s*\n/,2)
+      headlines = head.split(/\n(?=\w)/s)
+      head = headlines.reject { |h| h =~ /\ABcc:/i }.join("\n")
+      self.message = head + "\n" + body
+    end
 
     # Calls the sendmail method on the proper protocol class. Returns a
     # Qmail::Result Object with the response.

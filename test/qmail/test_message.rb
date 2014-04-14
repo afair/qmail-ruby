@@ -18,8 +18,11 @@ class TestMessage < MiniTest::Test
   end
 
   def test_use_headers
-    m = basic_message(headers:true)
+    email = basic_email.sub(/To:/, "Bcc: <secret@example.com>\nTo:")
+    m = Qmail::Message.new(email, 'me@example.com', 'you@example.com', headers:true)
     assert_equal 'me@example.com', m.return_path
     assert_equal 'you@example.com', m.recipients.first
+    assert_equal 'secret@example.com', m.recipients[1]
+    refute_match(/Bcc:/, m.message)
   end
 end
