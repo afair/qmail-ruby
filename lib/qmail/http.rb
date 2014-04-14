@@ -3,36 +3,30 @@ require 'net/http'
 module Qmail
   class HTTP
 
-    def self.sendmail(qmail_message)
-      Qmail::SMTP.new(qmail_message).sendmail
+    def self.sendmail(qmail_message, url)
+      Qmail::HTTP.new(qmail_message, url).sendmail
     end
 
-    def initialize(qmail_message)
-      @qmsg = qmail_message
+    def initialize(qmail_message, url=nil, http_lib=Net::HTTP)
+      @qmsg     = qmail_message
+      @url      = url || @qmsg.options[:http_url]
+      @http_lib = http_lib
     end
 
-    # Builds the QMQP request, and opens a connection to the QMQP Server and sends
-    # This implemtents the QMQP protocol, so does not need Qmail installed on the host system.
-    # System defaults will be used if no ip or port given.
-    # Returns true on success, false on failure (see @response), or nul on deferral
-    def sendmail(url=nil, qmail_message=nil)
-      @qmsg   = qmail_message if qmail_message
-      url   ||= @qmsg.options[:http_url]
-
+    # Makes the HTTP Call, returns a Qmail::Result object
+    def sendmail
       begin
-        uri = URI(url)
-        res = Net::HTTP.poste_form(uri, 'return_path'=>@qmsg.return_path,
-                                   'recipients'=>@qmsg.recipients,
-                                   'message'=>@qmsg.message)
-
-        res.code < '300' ? true : false
-
-      rescue SocketError => e # getaddrinfo: nodename nor servname provided, or not known
-        Qmail.log(:error, "HTTP Failure: #{res.inspect}" )
-        raise e
-
-      ensure
-        socket.close if socket
+        uri     = URI(@url)
+        request = (@qmsg.options[:json_extra] || {}).merge(
+                  {return_path:@qmsg.return_path,
+                   recipients: @qmsg.recipients,
+                   message:    @qmsg.message})
+        res     = @http_lib.post_form(uri, request)
+        ok      = res.code.to_i < 300 ? Qmail::EXIT_OK : Qmail::ERRORS[1]
+        Qmail::Result.new(@qmsg, :http, ok, res.message, res.body)
+      rescue SocketError => e
+        res = e
+        Qmail::Result.new(@qmsg, :http, Qmail::EXIT_ERROR, e.message)
       end
     end
   end

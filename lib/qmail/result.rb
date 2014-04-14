@@ -13,23 +13,23 @@ module Qmail
 
     # Helper to check result status if you have a Result or other value
     def self.success?(result)
-      result.is_a?(Qmail::Result) ? result.success? : result
+      result.is_a?(Qmail::Result) ? result.succeeded? : result
     end
 
     def succeeded?
-      @exit_code == Qmail::EXIT_OK
+      self.exit_code == Qmail::EXIT_OK
     end
 
     def deferred?
-      @exit_code == Qmail::EXIT_DEFER
+      self.exit_code == Qmail::EXIT_DEFER
     end
 
     def failed?
-      Qmail::EXIT_ERROR.include?(@exit_code)
+      Qmail::EXIT_ERROR.include?(self.exit_code)
     end
 
     def error
-      @exit_code
+      self.exit_code
     end
 
     # "23:Kok 1182362995 qp 21894," (if it's a netstring)
@@ -39,7 +39,7 @@ module Qmail
 
       if m = r.match(/\A\d+:([KZD]) (.+) qp (.+)/i)
         @qp = m[3]
-        @exit_code = Qmail::DELIVERY_STATUS.fetch(m[1].downcase) { Qmail::EXIT_ERROR.first }
+        self.exit_code = Qmail::DELIVERY_STATUS.fetch(m[1].downcase) { Qmail::EXIT_ERROR.first }
       end
     end
 

@@ -16,6 +16,7 @@ module Qmail
     include Process
 
     # Single-step processor. Takes an instance of Qmail::Message
+    # Returns a Qmail::Result object
     def self.sendmail(qmail_message)
       inject = Qmail::Inject.new(qmail_message)
       inject.sendmail
@@ -26,6 +27,7 @@ module Qmail
     end
 
     # This calls the Qmail-Queue program, so requires qmail to be installed (does not require it to be currently running).
+    # Returns a Qmail::Result object
     def sendmail
       run_qmail_queue(Qmail::Config.qmail_queue) do |msg, env|
         # Send the Message
@@ -39,6 +41,8 @@ module Qmail
 
       Qmail::Result.new(@qmsg, :queue, @exit_code)
     end
+
+    private
 
     # Forks, sets up stdin and stdout pipes, and starts qmail-queue.
     # If a block is passed, yields to it with [sendpipe, receivepipe],

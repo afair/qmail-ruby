@@ -20,7 +20,7 @@ module Qmail
   class Maildrop
     
     def self.sendmail(qmail_message, dir)
-      Qmail::Maildrop.new(dir).sendfile(qmail_message)
+      Qmail::Maildrop.new(dir).sendmail(qmail_message)
     end
 
     def initialize(dir)
@@ -29,8 +29,10 @@ module Qmail
     end
 
     def sendmail(qmail_message)
-      filename = qmail_message.to_md5
-      qmail_message.save_mailfile(dir + File::SEPARATOR + filename)
+      filename = @dir + File::SEPARATOR + qmail_message.to_md5
+      rc = save_mailfile(qmail_message, filename)
+      filename = rename_to_inode(filename) if Qmail::Config.maildrop_inode
+      Qmail::Result.new(qmail_message, :maildrop, rc, nil, filename)
     end
 
     # Iterates through the maildrop directory, returning a Qmail::Message
@@ -61,7 +63,7 @@ module Qmail
       end
     end
 
-    # Loads message from a Mailfile
+    # Loads message from a Mailfile, returns a Qmail::Message object
     def self.mailfile(filename)
       msg = Qmail::Message.new
       File.open(filename) do |f|
@@ -74,30 +76,52 @@ module Qmail
             msg.recipients.push(rec)
           end
         end
-        msg.message = f.read
+        msg.message = f.read.chomp
       end
       msg
     end
 
+    # Takes a Qmail::Message and a target path and filename. Serializes the
+    # message to the given filename
     def save_mailfile(msg, filename)
-      header = ""
-      msg.options.each { |k,v| header += "--#{k}=#{v} " }
-      File.open(filename,'w') do |f|
-        f.puts "Mailfile #{header.strip}" if header > ""
-        f.puts msg.return_path
-        msg.recipients.each { |r| f.puts r }
-        f.puts "\n" + msg.message
+      begin
+        header = option_string(msg.options) unless msg.options.empty?
+        File.open(filename,'w') do |f|
+          f.puts header if header
+          f.puts msg.return_path
+          msg.recipients.each { |r| f.puts r }
+          f.puts "\n" + msg.message
+        end
+      rescue
       end
+      File.exist?(filename) ? Qmail::EXIT_OK : Qmail::ERRORS[53]
+    end
+
+    private
+
+    def option_string(options)
+      header = ""
+      options.each { |k,v| header += "--#{k}=#{v} " }
+      header > "" ? "Mailfile #{header.strip}" : ""
     end
 
     # Parses "--option=value" formats, puts in options
-    def parse_options(str)
+    def self.parse_options(str)
       opts = {}
-      while m = str.match(/\A\s*--(\w+)[=\s]+(.+?)(\s*--.+)?/)
-        self.options[m[1].to_sym] = m[2]
+      while str && m = str.match(/\A\s*--(\w+)[=\s]+(.+?)(\s*--.+)?/)
+        opts[m[1].to_sym] = m[2]
         str = m[3]
       end
       opts
+    end
+
+    # Renames file to the inode number, like qmail does in it's queue
+    # Enable this if you want to keep identical messages separate.
+    def rename_to_inode(filename)
+      st = File::Stat.new(filename)
+      newname = @dir + File::SEPARATOR + st.ino.to_s
+      File.rename(filename, @dir + File::SEPARATOR + st.ino.to_s)
+      newname
     end
 
   end

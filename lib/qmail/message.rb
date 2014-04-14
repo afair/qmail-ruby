@@ -32,7 +32,7 @@ module Qmail
       self.options     = args.last.is_a?(Hash) ? args.pop : {}
       self.message     = message
       self.return_path = return_path
-      self.recipients  = Array(recipients) unless recipients.is_a?(Array)
+      self.recipients  = recipients.is_a?(Array) ? recipients : Array(recipients)
       self.recipients.push(*args) if args.size > 0
       self.mailfile(options[:mailfile])             if options[:mailfile]
       self.recipient_file(options[:recipient_file]) if options[:recipient_file]
@@ -62,6 +62,8 @@ module Qmail
     end
 
 
+    # Calls the sendmail method on the proper protocol class. Returns a
+    # Qmail::Result Object with the response.
     def sendmail(method=nil)
       method ||= self.options[:method] || :queue
       send(method) if %i(queue qmqp smtp maildrop http).include?(method)

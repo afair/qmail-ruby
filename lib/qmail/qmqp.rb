@@ -11,7 +11,7 @@ module Qmail
   #
   # Usage:
   #
-  #   Qmail::QMQP.sendmail(qmail_message)
+  #   Qmail::QMQP.sendmail(qmail_message) #=> Qmail::Result
   #
   class QMQP
 
@@ -23,10 +23,6 @@ module Qmail
       @qmsg = qmail_message
     end
 
-    # Builds the QMQP request, and opens a connection to the QMQP Server and sends
-    # This implemtents the QMQP protocol, so does not need Qmail installed on the host system.
-    # System defaults will be used if no ip or port given.
-    # Returns true on success, false on failure (see @response), or nul on deferral
     def sendmail(qmail_msg=nil)
       @qmsg    = qmail_message if qmail_message
       begin
@@ -38,12 +34,12 @@ module Qmail
           @response = socket.recv(1000)
         end
 
-      rescue Exception
-        continue
+      rescue SocketError => e
+        @response = e
       ensure
         socket.close if socket
+        Qmail::Result.new(@qmsg, :qmqp, @success, @response, "#{ip}:#{port}")
       end
-      Qmail::Result.new(@qmsg, :qmqp, @success, @response, "#{ip}:#{port}")
     end
 
     def qmqp_server(i=0)

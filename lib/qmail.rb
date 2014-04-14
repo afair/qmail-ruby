@@ -23,6 +23,8 @@ module Qmail
   #      recipients  - An list or array of email addresses
   #      options     - A hash of directives to control the queueing.
   #
+  # Returns: a Qmail::Result object
+  #
   # Options:
   #      method: "queue|qmqp|smtp|maildrop"
   #        - Sends the qmail using one of these commands adhering to qmail-queue
