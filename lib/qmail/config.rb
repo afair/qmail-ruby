@@ -7,7 +7,8 @@ module Qmail
   class Config
     @options = {
       qmail_dir:   "/var/qmail",
-      qmail_queue:  "/var/qmail/bin/qmail-queue",
+      qmail_queue: "/var/qmail/bin/qmail-queue",
+      qmqp_port:   628,
     }
 
     def self.options

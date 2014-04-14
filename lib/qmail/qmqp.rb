@@ -16,34 +16,38 @@ module Qmail
   class QMQP
 
     def self.sendmail(qmail_message)
-      Qmail::SMTP.new(qmail_message).sendmail
+      Qmail::QMQP.new(qmail_message).sendmail
     end
 
     def initialize(qmail_message)
       @qmsg = qmail_message
     end
 
-    def sendmail(qmail_msg=nil)
+    def sendmail(qmail_message=nil)
       @qmsg    = qmail_message if qmail_message
       begin
-        ip     = @qmsg.options[:ip] || qmqp_server
-        port   = @qmsg.options[:port] || 628
-        socket = TCPSocket.new(ip, @options[:port])
+        ip     = @qmsg.options[:ip]   || qmqp_server
+        port   = @qmsg.options[:port] || Qmail::Config.qmqp_port
+        #p "opening socket to...", ip, port
+        socket = TCPSocket.new(ip, port)
+        #p "socket!", socket
         if socket
           socket.send(@qmsg.to_netstring, 0)
+          #p "waiting fore response"
           @response = socket.recv(1000)
+          p @response
         end
+        socket.close
+        Qmail::Result.new(@qmsg, :qmqp, Qmail::EXIT_OK, @response, "#{ip}:#{port}")
 
-      rescue SocketError => e
-        @response = e
-      ensure
+      rescue SocketError, SystemCallError => e
         socket.close if socket
-        Qmail::Result.new(@qmsg, :qmqp, @success, @response, "#{ip}:#{port}")
+        Qmail::Result.new(@qmsg, :qmqp, Qmail::ERRORS[1], e.to_s, "#{ip}:#{port}")
       end
     end
 
     def qmqp_server(i=0)
-      dir = @qmsg.option[:qmail_dir] || '/var/qmail'
+      dir = @qmsg.options[:qmail_dir] || Qmail::Config.qmail_dir
       filename = "#{dir}/control/qmqpservers"
       return '127.0.0.1' unless File.exists?(filename)
       File.readlines(filename)[i].chomp

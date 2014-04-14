@@ -37,7 +37,7 @@ module Qmail
       @response = r = Qmail::Netstring.value(r||"")
       return if response.nil? || response == ""
 
-      if m = r.match(/\A\d+:([KZD]) (.+) qp (.+)/i)
+      if m = r.to_s.match(/\A\d+:([KZD]) (.+) qp (.+)/i)
         @qp = m[3]
         self.exit_code = Qmail::DELIVERY_STATUS.fetch(m[1].downcase) { Qmail::EXIT_ERROR.first }
       end

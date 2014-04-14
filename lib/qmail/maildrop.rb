@@ -41,7 +41,7 @@ module Qmail
     # the Mailfile from the Maildrop, or false to keep the file to retry later.
     #
     # Example Usage:
-    #   Qmail::Maildrop.new(dir).pickup {|m| m.sendmail }
+    #   Qmail::Maildrop.new(dir).pickup {|m| Qmail::Inject.sendmail(m) }
     #
     def pickup
       Dir.new(@dir).each do |filename|

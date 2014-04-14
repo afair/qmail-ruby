@@ -124,7 +124,7 @@ result = Qmail.maildrop("/var/maildrop",
                         method: :maildrop)
 
 # In another process, picked up the dropped mail
-Qmail::Maildrop.new("/var/maildrop").pickup {|m| m.sendmail }
+Qmail::Maildrop.new("/var/maildrop").pickup {|m| Qmail::Inejct.sendmail(m) }
 ```
 
 Deferred messages in the maildrop have the number of times is has been attempted
