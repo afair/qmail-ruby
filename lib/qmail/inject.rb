@@ -69,7 +69,7 @@ module Qmail
 
         # Change directory and load command
         Dir.chdir(@options[:qmail_root])
-        exec( command || @options[:qmail_queue] )
+        exec(*command.split)
         raise "Exec qmail-queue failed"
       end
 
@@ -78,6 +78,7 @@ module Qmail
         yield(msg_write, env_write)
         env_write.close
         wait(@child)
+        #p "?=#$?; >>=#{$?>>8}"
         @exit_code = $? >> 8
         return @exit_code
       end
