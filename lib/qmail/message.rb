@@ -3,7 +3,7 @@ require 'json'
 
 module Qmail
   # Constructs a Qmail Queue Message Oject. It is used as a standard interface
-  # for classes in this library. A queue message has its payload data (also 
+  # for classes in this library. A queue message has its payload data (also
   # named message within) which is a complete RFC822-style email message, with
   # full headers, bodies and attachments.
   #
@@ -11,7 +11,7 @@ module Qmail
   # of recipient email addresses. The return path is an email, usually the sender's
   # address, to which undeliverable or "bounced" messages will be returned.
   #
-  # This library attempts to use VERP (Variable Envelope Return Path) extentions
+  # This library can to use VERP (Variable Envelope Return Path) extentions
   # on the return path, so automated bounce detection becomes easier. With VERP,
   # the recipient's email address is piggybacked onto the mailbox of the sender,
   # replacing the @ by an = in the resulting address.
@@ -28,15 +28,37 @@ module Qmail
   class Message
     attr_accessor :message, :return_path, :recipients, :options
 
-    def initialize(message='', return_path=nil, recipients=[], *args)
+    # Message.new("message", "return_path@example.com", "recip1@example.com", ...., {option:value})
+    def initialize(*args)
       self.options     = args.last.is_a?(Hash) ? args.pop : {}
-      self.message     = message
-      self.return_path = return_path
-      self.recipients  = recipients.is_a?(Array) ? recipients : Array(recipients)
-      self.recipients.push(*args) if args.size > 0
-      self.mailfile(options[:mailfile])             if options[:mailfile]
+      self.message     = args.shift || ''
+      self.return_path = args.shift || ''
+      self.recipients  = args
+      load_mailfile(options[:mailfile])             if options[:mailfile]
       self.recipient_file(options[:recipient_file]) if options[:recipient_file]
       use_headers                                   if options[:headers]
+    end
+
+    # Sets the return path, and optionally alters it to the VERP format if enabled
+    # That format is "returnpath-@domain-@[]" The hyphen before the @ will be inserted
+    # unless another punctuation character (not alpha-numeric) is already there.
+    # The "-@[]" suffix is a signal for qmail to use VERP, and alter the return path
+    # by inserting the recipient's mailbox, '=' and domain before the '@'
+    # giving `me-you=example.com@example.com`
+    def return_path=(email_address)
+      if (!!options.fetch(:verp) { Qmail::Config.verp })
+        email_address  = email_address.sub(/@/, '-@') if email_address =~ /\w@/
+        email_address += '-@[]'
+      end
+      @return_path     = email_address
+    end
+
+    def load_mailfile(filename)
+      m                = Qmail::Maildrop.mailfile(filename)
+      self.message     = m.message
+      self.return_path = m.return_path
+      self.recipients  = m.recipients
+      self.options     = m.options
     end
 
     def use_headers

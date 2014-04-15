@@ -35,7 +35,6 @@ module Qmail
           socket.send(@qmsg.to_netstring, 0)
           #p "waiting fore response"
           @response = socket.recv(1000)
-          p @response
         end
         socket.close
         Qmail::Result.new(@qmsg, :qmqp, Qmail::EXIT_OK, @response, "#{ip}:#{port}")

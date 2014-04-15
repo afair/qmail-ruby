@@ -34,6 +34,7 @@ require "qmail"
 ### Configuration
 
 To specify global options for Qmail processing, override them like this:
+
 ```ruby
 Qmail::Config do |q|
   q.method = :queue || :qmqp || :maildrop
@@ -174,10 +175,31 @@ Additional-Header: from the http_headers option
 }
 ```
 
+## Future Plans
+
+Pull Requests for these would be great!
+
+### Qmail / ActionMailer Integration
+
+Although it can respond to any "sendmail" command, it would be great to
+offer a Maildrop or QMQP service as well.
+
+### Qmail::Queue Class
+
+* Queue Utilities and Searching
+
+### Qmail::Log Class
+
+* Parses Qmail Logs like qmail-analyze would do. 
+* "grep" certain deliveries from the log
+* Failure Analysis
+
+
+
 
 ## Contributing
 
-1. Fork it ( http://github.com/<my-github-username>/qmail/fork )
+1. Fork it http://github.com/afair/qmail/fork
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)

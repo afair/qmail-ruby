@@ -21,7 +21,8 @@ module Qmail
 
     def self.method_missing(method, *args, &block)
       if args.size>0
-        @options[method.to_s.chop.to_sym] = args.shift
+        method = method.to_s.chop.to_sym if method.to_s =~ /=\z/
+        @options[method] = args.first
       else
         @options[method]
       end
