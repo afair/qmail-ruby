@@ -10,8 +10,8 @@ def basic_email
   "Subject: Testing\nFrom: <me@example.com>\nTo: <you@example.com>\n\nTest Me!"
 end
 
-def basic_message(opt={})
-  Qmail::Message.new(basic_email, 'me@example.com', 'you@example.com',
+def basic_message(from=ENV['FROM'], to=ENV['TO'], opt={})
+  Qmail::Message.new(basic_email, from||'me@example.com', to||'you@example.com',
                      {method: :queue}.merge(opt))
 end
 

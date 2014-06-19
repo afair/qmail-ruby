@@ -70,7 +70,7 @@ module Qmail
         while (rec = f.readline.chomp) > ""
           if rec =~ /\AMailfile (.+)/
             msg.options = parse_options($1)
-          elsif msg.return_path.nil?
+          elsif msg.return_path.nil? || msg.return_path == ""
             msg.return_path = rec
           else
             msg.recipients.push(rec)
@@ -108,7 +108,7 @@ module Qmail
     # Parses "--option=value" formats, puts in options
     def self.parse_options(str)
       opts = {}
-      while str && m = str.match(/\A\s*--(\w+)[=\s]+(.+?)(\s*--.+)?/)
+      while str && m = str.match(/\A\s*--(\w+)[=\s]+(\S+)/)
         opts[m[1].to_sym] = m[2]
         str = m[3]
       end

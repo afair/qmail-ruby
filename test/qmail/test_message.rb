@@ -26,7 +26,7 @@ class TestMessage < MiniTest::Test
   end
 
   def test_verp
-    m = basic_message(verp:true)
+    m = basic_message(nil, nil, verp:true)
     assert_equal 'me-@example.com-@[]', m.return_path
   end
 end

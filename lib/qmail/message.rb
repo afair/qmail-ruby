@@ -94,7 +94,7 @@ module Qmail
     # Qmail::Result Object with the response.
     def sendmail(method=nil)
       method ||= self.options[:method] || :queue
-      send(method) if %i(queue qmqp smtp maildrop http).include?(method)
+      send(method) if [:queue, :qmqp, :smtp, :maildrop, :http].include?(method)
     end
 
     def queue

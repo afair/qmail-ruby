@@ -24,6 +24,7 @@ class TestQMQP < MiniTest::Test
     Qmail::Config.qmqp_port = 6280
     run_qmqp_server
     r = Qmail::QMQP.sendmail(basic_message)
+    p r unless r.succeeded?
     assert r.succeeded?, "Unsuccessful"
     assert "21894", r.qp
   end

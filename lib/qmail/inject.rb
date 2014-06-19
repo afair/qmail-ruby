@@ -17,19 +17,20 @@ module Qmail
 
     # Single-step processor. Takes an instance of Qmail::Message
     # Returns a Qmail::Result object
-    def self.sendmail(qmail_message)
-      inject = Qmail::Inject.new(qmail_message)
+    def self.sendmail(qmail_message, qmail_queue_command=nil)
+      inject = Qmail::Inject.new(qmail_message, qmail_queue_command)
       inject.sendmail
     end
 
-    def initialize(qmail_message)
+    def initialize(qmail_message, qmail_queue_command=nil)
       @qmsg = qmail_message
+      @command = qmail_queue_command || Qmail::Config.qmail_queue
     end
 
     # This calls the Qmail-Queue program, so requires qmail to be installed (does not require it to be currently running).
     # Returns a Qmail::Result object
     def sendmail
-      run_qmail_queue(Qmail::Config.qmail_queue) do |msg, env|
+      run_qmail_queue(@command) do |msg, env|
         # Send the Message
         msg.puts @qmsg.message
         msg.close
@@ -48,20 +49,20 @@ module Qmail
     # If a block is passed, yields to it with [sendpipe, receivepipe],
     # and returns the exist cod, otherwise returns {:msg=>pipe, :env=>pipe, :pid=>@child}
     # It exits 0 on success or another code on failure.
-    def run_qmail_queue(command=nil, &block)
+    def run_qmail_queue(command, &block)
       # Set up pipes and qmail-queue child process
       msg_read, msg_write = IO.pipe
       env_read, env_write = IO.pipe
-      @child=fork # child? nil : childs_process_id
+      @child=fork # child? ? nil : childs_process_id
 
-      unless @child
+      unless @child # I'm the child
         ## Set child's stdin(0) to read from msg
         $stdin.close # FD=0
         msg_read.dup
         msg_read.close
         msg_write.close
 
-        ## Set child's stdout(1) to read from env
+        ## Set child's stdout(1) to read from envelope
         $stdout.close # FD=1
         env_read.dup
         env_read.close
@@ -70,17 +71,22 @@ module Qmail
         # Change directory and load command
         Dir.chdir(@options[:qmail_root])
         exec(*command.split)
-        raise "Exec qmail-queue failed"
+        raise "Exec #{command} failed"
       end
 
       # Parent Process with block
       if block_given?
-        yield(msg_write, env_write)
+        msg_write.sync = true
+        env_write.sync = true
+        block.call(msg_write, env_write)
         env_write.close
-        wait(@child)
-        #p "?=#$?; >>=#{$?>>8}"
+        sleep 1
+        Process.wait(@child)
+        #p "?=#{$?}; >>=#{$?>>8}"
         @exit_code = $? >> 8
         return @exit_code
+      else
+        return [msg_write, env_write, @child]
       end
     end
 
