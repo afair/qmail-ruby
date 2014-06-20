@@ -34,6 +34,7 @@ module Qmail
       self.message     = args.shift || ''
       self.return_path = args.shift || ''
       self.recipients  = args
+      read_message(options[:mailhandle])            if options[:mailhandle]
       load_mailfile(options[:mailfile])             if options[:mailfile]
       self.recipient_file(options[:recipient_file]) if options[:recipient_file]
       use_headers                                   if options[:headers]
@@ -51,6 +52,11 @@ module Qmail
         email_address += '-@[]'
       end
       @return_path     = email_address
+    end
+
+    # Reads the message from the IO stream passed (such as $stdin)
+    def read_message(io)
+      @message = io.read
     end
 
     def load_mailfile(filename)

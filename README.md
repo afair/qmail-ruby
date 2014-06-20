@@ -1,10 +1,16 @@
 # The Qmail Gem
 
+[![Gem Version](https://badge.fury.io/rb/qmail.svg)](http://badge.fury.io/rb/qmail)
+
 The Qmail Gem
 implements direct interfaces to the
 [Qmail](http://qmail.org) mail server (MTA).
 Use it to insert an email message into the Qmail queue and other
 operations.
+
+While initially intending to support Qmail interfaces, other mail
+transport actions have been included, making this a general purpose mail
+transport library.
 
 This library supersedes the original [ruby-qmail](https://github.com/afair/ruby-qmail])
 library and `ruby-qmail` gem.

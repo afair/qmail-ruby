@@ -56,13 +56,34 @@ module Qmail
   #          archived here for retry processing.
   #
   def self.sendmail(*message_args)
-    @qmessage = Qmail::Message.new(*message_args)
-    @qmessage.sendmail
+    qmessage = Qmail::Message.new(*message_args)
+    qmessage.sendmail
+  end
+
+  # Implements the basic Sendmail command line to send email
+  #
+  #     echo message | sendmail -f return_path recipients ...
+  #
+  # To use this way, invoke this command from the command line or shell script:
+  #
+  #     echo message | ruby -r qmail -e 'Qmail.command' return_path recipients...
+  #
+  # To use a shell script, you can also send options with default delivery method
+  #
+  # sendmail.sh:
+  #     ruby -r qmail -e 'Qmail.command(method: :queue)' $*
+  # (You may also want to use getops to parse -freturn_path and send it in properly)
+  #
+  def self.command(options={})
+    (return_path, *recipients) = ARGV
+    options[:mailhandle] ||= $stdin
+    qmessage = Qmail::Message.new('', return_path, recipients, options)
+    qmessage.sendmail
   end
 
   def self.maildrop(dir, *message_args)
-    @qmessage = Qmail::Message.new(*message_args)
-    @qmessage.maildrop(dir)
+    qmessage = Qmail::Message.new(*message_args)
+    qmessage.maildrop(dir)
   end
 
   def self.log(level, *data)

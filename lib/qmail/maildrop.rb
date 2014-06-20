@@ -24,7 +24,8 @@ module Qmail
     end
 
     def initialize(dir)
-      raise "Qmail::Maildrop directory #{dir} does not exist" unless Dir.exists?(dir)
+      dir ||= ENV['MAILDROP_DIR']
+      raise "Qmail::Maildrop directory #{dir} does not exist" if !dir || !Dir.exists?(dir)
       @dir = dir
     end
 
