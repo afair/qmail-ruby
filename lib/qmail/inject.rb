@@ -36,6 +36,7 @@ module Qmail
         msg.close
 
         env.write('F' + @qmsg.return_path + "\0")
+        p @qmsg.recipients
         @qmsg.recipients.each { |r| env.write('T' + r + "\0") }
         env.write("\0") # End of "file"
       end
@@ -54,6 +55,8 @@ module Qmail
       msg_read, msg_write = IO.pipe
       env_read, env_write = IO.pipe
       @child=fork # child? ? nil : childs_process_id
+      qmail_dir = @qmsg.options[:qmail_root] || Qmail::Config.qmail_dir
+      raise "Qmail Dir not found: #{qmail_dir}" unless Dir.exist?(qmail_dir)
 
       unless @child # I'm the child
         ## Set child's stdin(0) to read from msg
@@ -69,7 +72,7 @@ module Qmail
         env_write.close
 
         # Change directory and load command
-        Dir.chdir(@options[:qmail_root])
+        Dir.chdir(qmail_dir)
         exec(*command.split)
         raise "Exec #{command} failed"
       end

@@ -1,3 +1,4 @@
+require 'getoptlong'
 require "qmail/config"
 require "qmail/http"
 require "qmail/inject"
@@ -64,20 +65,47 @@ module Qmail
   #
   #     echo message | sendmail -f return_path recipients ...
   #
+  # If return path or recipients are not provided, they are taken
+  # from the message
+  #
   # To use this way, invoke this command from the command line or shell script:
   #
-  #     echo message | ruby -r qmail -e 'Qmail.command' return_path recipients...
+  #     echo message | ruby -r qmail -e 'Qmail.command' -- -f return_path recipients...
   #
-  # To use a shell script, you can also send options with default delivery method
+  # You may also pass in qmail message sending options:
+  #   --method=queue|qmqp|smtp|maildrop|http|mailbox|maildir
+  #   --ip=ipv4
+  #   --port=integer
+  #   --maildrop-dir=dirname
+  #   --qmail-queue=filename
+  #   --qmail-root/dirname
+  #   --http-url=url
+  #   --mailbox=filepath
+  #   --maildir=dirname
+  #  # To use a shell script, you can also send options with default delivery method
   #
   # sendmail.sh:
-  #     ruby -r qmail -e 'Qmail.command(method: :queue)' $*
-  # (You may also want to use getops to parse -freturn_path and send it in properly)
+  #     ruby -r qmail -e 'Qmail.command(method: :queue)' -- $*
   #
   def self.command(options={})
-    (return_path, *recipients) = ARGV
+    GetoptLong.new(
+      ['-f',             GetoptLong::REQUIRED_ARGUMENT], # from (return_path)
+      ['--method',       GetoptLong::REQUIRED_ARGUMENT], # Options to Qmail::Message
+      ['--ip',           GetoptLong::REQUIRED_ARGUMENT], #  " "
+      ['--port',         GetoptLong::REQUIRED_ARGUMENT],
+      ['--maildrop-dir', GetoptLong::REQUIRED_ARGUMENT],
+      ['--qmail-queue',  GetoptLong::REQUIRED_ARGUMENT],
+      ['--qmail-root',   GetoptLong::REQUIRED_ARGUMENT],
+      ['--http-url',     GetoptLong::REQUIRED_ARGUMENT],
+      ['--mailbox',      GetoptLong::REQUIRED_ARGUMENT],
+      ['--maildir',      GetoptLong::REQUIRED_ARGUMENT],
+    ).each {|opt, arg| options[opt.sub(/\A-+/,'').gsub(/\W/,'_').to_sym] =  arg }
+    recipients = ARGV
+
     options[:mailhandle] ||= $stdin
-    qmessage = Qmail::Message.new('', return_path, recipients, options)
+    qmessage = Qmail::Message.new('', options[:f], recipients, options)
+    qmessage.use_headers(false) # Only replace missing return_path, recipients
+
     qmessage.sendmail
   end
 

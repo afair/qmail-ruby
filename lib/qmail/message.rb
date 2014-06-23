@@ -33,11 +33,18 @@ module Qmail
       self.options     = args.last.is_a?(Hash) ? args.pop : {}
       self.message     = args.shift || ''
       self.return_path = args.shift || ''
-      self.recipients  = args
+      self.recipients  = args.flatten
       read_message(options[:mailhandle])            if options[:mailhandle]
       load_mailfile(options[:mailfile])             if options[:mailfile]
       self.recipient_file(options[:recipient_file]) if options[:recipient_file]
       use_headers                                   if options[:headers]
+    end
+
+    # Reads a message from a file, uses From/To headers for return path and recipients.
+    def self.read(filename, options)
+      msg = Message.new(options.merge(mailfile:filename))
+      msg.use_headers
+      msg
     end
 
     # Sets the return path, and optionally alters it to the VERP format if enabled
@@ -67,14 +74,20 @@ module Qmail
       self.options     = m.options
     end
 
-    def use_headers
+    def use_headers(replace_headers=true)
       h = message_headers
-      self.return_path = addresses(h[:from]).first
+      if !self.return_path || self.return_path.empty? || replace_headers
+        self.return_path = addresses(h[:from]).first
+      end
+
       recips =  []
       [:to, :cc, :bcc].each do |hdr|
         recips << addresses(h[hdr])
       end
-      self.recipients = recips.flatten
+      if !self.recipients || self.recipients.empty? || replace_headers
+        self.recipients = recips.flatten
+      end
+
       remove_bcc_header
     end
 
@@ -95,12 +108,27 @@ module Qmail
       head = headlines.reject { |h| h =~ /\ABcc:/i }.join("\n")
       self.message = head + "\n" + body
     end
+    
+    # Changes method based on co-requisit options
+    def coerce_method
+      self.options[:method] = :mailbox  if self.options[:mailbox]
+      self.options[:method] = :maildir  if self.options[:maildir]
+      self.options[:method] = :maildrop if self.options[:maildrop_dir]
+      self.options[:method] = :http     if self.options[:http_url]
+      self.options[:method] = :qmqp     if self.options[:ip]
+      self.options[:method] = :queue    if self.options[:qmail_queue]
+    end
 
     # Calls the sendmail method on the proper protocol class. Returns a
     # Qmail::Result Object with the response.
     def sendmail(method=nil)
       method ||= self.options[:method] || :queue
-      send(method) if [:queue, :qmqp, :smtp, :maildrop, :http].include?(method)
+      coerce_method
+      if [:queue, :qmqp, :smtp, :maildrop, :http, :mailbox, :maildir].include?(method)
+        send(method)
+      else
+        raise "Unknown mailing method: #{method}"
+      end
     end
 
     def queue
@@ -117,6 +145,14 @@ module Qmail
 
     def maildrop(dir=nil)
       Qmail::Maildrop.sendmail(self, dir || self.options[:maildrop_dir])
+    end
+
+    def mailbox(filename=nil)
+      Qmail::Mailbox.sendmail(self, filename || self.options[:mailbox])
+    end
+
+    def maildir(dir=nil)
+      Qmail::Maildir.sendmail(self, dir || self.options[:maildir])
     end
 
     def http(url=nil)
