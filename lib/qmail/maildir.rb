@@ -1,4 +1,5 @@
 require 'socket'
+require 'fileutils'
 
 module Qmail
 
@@ -20,6 +21,22 @@ module Qmail
 
     def self.sendmail(qmail_message, dir)
       Qmail::Maildir.new(dir).sendmail(qmail_message)
+    end
+
+    def self.create(dir)
+      FileUtils.mkdir_p(File.join(dir,'cur'))
+      %w(tmp new).each {|w| Dir.mkdir(File.join(dir,w)) }
+      Maildir.new(dir)
+    end
+
+    def clean!
+      kill!
+      Maildir.create(@dir)
+      self
+    end
+
+    def kill!
+      FileUtils.rmtree(@dir)
     end
 
     def initialize(dir)
