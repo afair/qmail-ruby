@@ -1,4 +1,6 @@
 require 'getoptlong'
+require 'socket'
+require 'yaml'
 require "qmail/config"
 require "qmail/http"
 require "qmail/inject"
@@ -88,6 +90,16 @@ module Qmail
   #     ruby -r qmail -e 'Qmail.command(method: :queue)' -- $*
   #
   def self.command(options={})
+    options, recipients = command_arguments(options)
+    options[:mailhandle] ||= $stdin
+    options[:f] ||= default_return_path
+    qmessage = Qmail::Message.new('', options[:f], recipients, options)
+    qmessage.use_headers(false) # Only replace missing return_path, recipients
+
+    qmessage.sendmail
+  end
+
+  def self.command_arguments(options={})
     GetoptLong.new(
       ['-f',             GetoptLong::REQUIRED_ARGUMENT], # from (return_path)
       ['--method',       GetoptLong::REQUIRED_ARGUMENT], # Options to Qmail::Message
@@ -99,14 +111,23 @@ module Qmail
       ['--http-url',     GetoptLong::REQUIRED_ARGUMENT],
       ['--mailbox',      GetoptLong::REQUIRED_ARGUMENT],
       ['--maildir',      GetoptLong::REQUIRED_ARGUMENT],
+      ['--qmailrc',      GetoptLong::REQUIRED_ARGUMENT],
     ).each {|opt, arg| options[opt.sub(/\A-+/,'').gsub(/\W/,'_').to_sym] =  arg }
     recipients = ARGV
+    options = load_qmailrc(options)
 
-    options[:mailhandle] ||= $stdin
-    qmessage = Qmail::Message.new('', options[:f], recipients, options)
-    qmessage.use_headers(false) # Only replace missing return_path, recipients
+    [options, recipients]
+  end
 
-    qmessage.sendmail
+  def self.default_return_path
+    (ENV['USER']||ENV['USERNAME']) + '@' + Socket.gethostname
+  end
+
+  def self.load_qmailrc(options)
+    fn = options[:qmailrc] || "#{ENV["HOME"]}/.qmailrc"
+    return options unless File.exists?(fn)
+    yaml = YAML.load_file(fn)
+    yaml.merge(options)
   end
 
   def self.maildrop(dir, *message_args)

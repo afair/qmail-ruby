@@ -1,3 +1,5 @@
+require 'net/smtp'
+
 module Qmail
 
   # Sends Email via SMTP using the qmail-remote command
@@ -20,6 +22,9 @@ module Qmail
     # and wait for the network event to complete. If multiple recipients are passed, it will run
     # qmail-remote delivery for each at a time to honor VERP return paths.
     def sendmail
+      cmdfile = "#{@qmsg.options[:qmail_root]}/bin/qmail-remote"
+      return smtp unless File.exists?(cmdfile)
+
       rp1, rp2 = @qmsg.return_path.split(/@/,2)
       rp = @qmsg.return_path
       @qmsg.recipients.each do |recip|
@@ -28,7 +33,7 @@ module Qmail
           rp = "#{rp1}#{mailbox}=#{host}@#{rp2}"
         end
 
-        cmd = "#{@qmsg.options[:qmail_root]}+/bin/qmail-remote #{host} #{rp} #{recip}"
+        cmd = "#{cmdfile} #{host} #{rp} #{recip}"
         @success = self.spawn_command(cmd) do |send, recv|
           send.puts @qmsg.message
           send.close
@@ -78,6 +83,14 @@ module Qmail
       {:send=>parent_write, :receive=>parent_read, :pid=>@child}
     end
 
-  end
+    def smtp
+      @qmsg.recipients.each do |r|
+        _, recip_host = r.split(/@/,2)
+        Net::SMTP.start(recip_host, 25) do |smtp|
+          smtp.send_message(@qmsg.message, @qmsg.return_path, r)
+        end
+      end
+    end
 
+  end
 end
