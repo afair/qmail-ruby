@@ -1,7 +1,7 @@
 require 'socket'
 require 'fileutils'
 
-module Qmail
+module MailTools
 
   # Delivers a Message to a Maildir format directory. See:
   #   http://en.wikipedia.org/wiki/Maildir
@@ -19,8 +19,8 @@ module Qmail
     INFO = {'P'=>'Passed/Resent/Forwarded/Bounced', 'R'=>'Replied', 'S'=>'Seen',
             'T'=>'Trashed', 'D'=>'Draft', 'F'=>'Flagged'}
 
-    def self.sendmail(qmail_message, dir)
-      Qmail::Maildir.new(dir).sendmail(qmail_message)
+    def self.sendmail(mail_tools_message, dir)
+      MailTools::Maildir.new(dir).sendmail(mail_tools_message)
     end
 
     def self.create(dir)
@@ -43,8 +43,8 @@ module Qmail
       @dir = dir
     end
 
-    def sendmail(qmail_message)
-      write_message(qmail_message)
+    def sendmail(mail_tools_message)
+      write_message(mail_tools_message)
     end
 
     # Adds message to maildir. First, we write to dir/tmp/uniquename, then move to 
@@ -69,7 +69,7 @@ module Qmail
           c = n.sub('/new/', '/cur/')
           c += ':2,'
           File.rename(n, c)
-          m = Qmail::Message.read(c)
+          m = MailTools::Message.read(c)
           yield m, c
         end
       end
@@ -81,7 +81,7 @@ module Qmail
       Dir.new(File.join(@dir,'cur')).each do |filename|
         if filename =~ /\A\w/ # Not a . or .. 
           f = File.join(@dir, filename)
-          n = Qmail::Message.read(f)
+          n = MailTools::Message.read(f)
           yield f, n
         end
       end

@@ -1,11 +1,11 @@
-module Qmail
+module MailTools
 
-  # The Qmail::Inject class inserts a message into the queue
-  # The name comes from the qmail-inject command. It spawns
-  # off qmail-queue and writes the message and envelope into
+  # The MailTools::Inject class inserts a message into the queue
+  # The name comes from the mail_tools-inject command. It spawns
+  # off mail_tools-queue and writes the message and envelope into
   # its designated file handles.
   #
-  # Qmail-queue Protocol:
+  # MailTools-queue Protocol:
   # 1. Reads mail message from File Descriptor 0 until closed
   # 2. reads Envelope from FD 1. Envelope Stream:
   #    * "F" + sender_email + "\0"
@@ -15,22 +15,22 @@ module Qmail
   class Inject
     include Process
 
-    # Single-step processor. Takes an instance of Qmail::Message
-    # Returns a Qmail::Result object
-    def self.sendmail(qmail_message, qmail_queue_command=nil)
-      inject = Qmail::Inject.new(qmail_message, qmail_queue_command)
+    # Single-step processor. Takes an instance of MailTools::Message
+    # Returns a MailTools::Result object
+    def self.sendmail(mail_tools_message, mail_tools_queue_command=nil)
+      inject = MailTools::Inject.new(mail_tools_message, mail_tools_queue_command)
       inject.sendmail
     end
 
-    def initialize(qmail_message, qmail_queue_command=nil)
-      @qmsg = qmail_message
-      @command = qmail_queue_command || Qmail::Config.qmail_queue
+    def initialize(mail_tools_message, mail_tools_queue_command=nil)
+      @qmsg = mail_tools_message
+      @command = mail_tools_queue_command || MailTools::Config.mail_tools_queue
     end
 
-    # This calls the Qmail-Queue program, so requires qmail to be installed (does not require it to be currently running).
-    # Returns a Qmail::Result object
+    # This calls the MailTools-Queue program, so requires mail_tools to be installed (does not require it to be currently running).
+    # Returns a MailTools::Result object
     def sendmail
-      run_qmail_queue(@command) do |msg, env|
+      run_mail_tools_queue(@command) do |msg, env|
         # Send the Message
         msg.puts @qmsg.message
         msg.close
@@ -41,22 +41,22 @@ module Qmail
         env.write("\0") # End of "file"
       end
 
-      Qmail::Result.new(@qmsg, :queue, @exit_code)
+      MailTools::Result.new(@qmsg, :queue, @exit_code)
     end
 
     private
 
-    # Forks, sets up stdin and stdout pipes, and starts qmail-queue.
+    # Forks, sets up stdin and stdout pipes, and starts mail_tools-queue.
     # If a block is passed, yields to it with [sendpipe, receivepipe],
     # and returns the exist cod, otherwise returns {:msg=>pipe, :env=>pipe, :pid=>@child}
     # It exits 0 on success or another code on failure.
-    def run_qmail_queue(command, &block)
-      # Set up pipes and qmail-queue child process
+    def run_mail_tools_queue(command, &block)
+      # Set up pipes and mail_tools-queue child process
       msg_read, msg_write = IO.pipe
       env_read, env_write = IO.pipe
       @child=fork # child? ? nil : childs_process_id
-      qmail_dir = @qmsg.options[:qmail_root] || Qmail::Config.qmail_dir
-      raise "Qmail Dir not found: #{qmail_dir}" unless Dir.exist?(qmail_dir)
+      mail_tools_dir = @qmsg.options[:mail_tools_root] || MailTools::Config.mail_tools_dir
+      raise "MailTools Dir not found: #{mail_tools_dir}" unless Dir.exist?(mail_tools_dir)
 
       unless @child # I'm the child
         ## Set child's stdin(0) to read from msg
@@ -72,7 +72,7 @@ module Qmail
         env_write.close
 
         # Change directory and load command
-        Dir.chdir(qmail_dir)
+        Dir.chdir(mail_tools_dir)
         exec(*command.split)
         raise "Exec #{command} failed"
       end

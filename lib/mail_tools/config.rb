@@ -1,9 +1,9 @@
-module Qmail
+module MailTools
 
-  # Qmail::Config - Stores and Retries Configuration Settings
+  # MailTools::Config - Stores and Retries Configuration Settings
   # Usage:
-  #   Qmail::Config.setting = "value"
-  #   do_somthing() if Qmail::Config.setting == "value"
+  #   MailTools::Config.setting = "value"
+  #   do_somthing() if MailTools::Config.setting == "value"
   class Config
     @options = {
       qmail_dir:   "/var/qmail",

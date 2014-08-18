@@ -3,7 +3,7 @@ require_relative '../test_helper.rb'
 class TestQMQP < MiniTest::Test
 
   def run_qmqp_server
-    server = TCPServer.new(Qmail::Config.qmqp_port)
+    server = TCPServer.new(MailTools::Config.qmqp_port)
     Thread.new do
       client = server.accept
       b = 0
@@ -12,18 +12,18 @@ class TestQMQP < MiniTest::Test
       end
       msg = client.read(b)
       if msg =~ /\A\d+:Subject: Testing/
-        client.puts Qmail::Netstring.of("Kok 1182362995 qp 21894")
+        client.puts MailTools::Netstring.of("Kok 1182362995 qp 21894")
       else
-        client.puts Qmail::Netstring.of("Derror bad format")
+        client.puts MailTools::Netstring.of("Derror bad format")
       end
       client.close
     end
   end
 
   def test_qmqp
-    Qmail::Config.qmqp_port = 6280
+    MailTools::Config.qmqp_port = 6280
     run_qmqp_server
-    r = Qmail::QMQP.sendmail(basic_message)
+    r = MailTools::QMQP.sendmail(basic_message)
     p r unless r.succeeded?
     assert r.succeeded?, "Unsuccessful"
     assert "21894", r.qp

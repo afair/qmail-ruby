@@ -1,11 +1,11 @@
-module Qmail
+module MailTools
 
-  # The Maildrop and Mailfile constructs do not come from Qmail, and are
+  # The Maildrop and Mailfile constructs do not come from MailTools, and are
   # provided as a simple service to avoid network issues and gives emails
   # a place to stay before retrying after an unsuccessful send. It can
   # also replace a message queue or separate publisher and email functionality.
   #
-  # A Maildrop is a directory to which Qmail::Message files are serialized
+  # A Maildrop is a directory to which MailTools::Message files are serialized
   # and named with the MD5 digest of the message data and envelope. With
   # this approach, identical messages could be overwritten.
   #
@@ -19,36 +19,36 @@ module Qmail
   #
   class Maildrop
     
-    def self.sendmail(qmail_message, dir)
-      Qmail::Maildrop.new(dir).sendmail(qmail_message)
+    def self.sendmail(mail_tools_message, dir)
+      MailTools::Maildrop.new(dir).sendmail(mail_tools_message)
     end
 
     def initialize(dir)
       dir ||= ENV['MAILDROP_DIR']
-      raise "Qmail::Maildrop directory #{dir} does not exist" if !dir || !Dir.exists?(dir)
+      raise "MailTools::Maildrop directory #{dir} does not exist" if !dir || !Dir.exists?(dir)
       @dir = dir
     end
 
-    def sendmail(qmail_message)
-      filename = @dir + File::SEPARATOR + qmail_message.to_md5
-      rc = save_mailfile(qmail_message, filename)
-      filename = rename_to_inode(filename) if Qmail::Config.maildrop_inode
-      Qmail::Result.new(qmail_message, :maildrop, rc, nil, filename)
+    def sendmail(mail_tools_message)
+      filename = @dir + File::SEPARATOR + mail_tools_message.to_md5
+      rc = save_mailfile(mail_tools_message, filename)
+      filename = rename_to_inode(filename) if MailTools::Config.maildrop_inode
+      MailTools::Result.new(mail_tools_message, :maildrop, rc, nil, filename)
     end
 
-    # Iterates through the maildrop directory, returning a Qmail::Message
+    # Iterates through the maildrop directory, returning a MailTools::Message
     # object and filename (if you want to stat it) to the block. The
     # block should return a true value on successful processing to delete
     # the Mailfile from the Maildrop, or false to keep the file to retry later.
     #
     # Example Usage:
-    #   Qmail::Maildrop.new(dir).pickup {|m| Qmail::Inject.sendmail(m) }
+    #   MailTools::Maildrop.new(dir).pickup {|m| MailTools::Inject.sendmail(m) }
     #
     def pickup
       Dir.new(@dir).each do |filename|
         if filename =~ /\A\w/ # Not a . or .. 
           path = @dir + File::SEPARATOR + filename
-          m = Qmail::Maildrop.mailfile(path)
+          m = MailTools::Maildrop.mailfile(path)
 
           if yield m, path
             File.unlink path
@@ -64,9 +64,9 @@ module Qmail
       end
     end
 
-    # Loads message from a Mailfile, returns a Qmail::Message object
+    # Loads message from a Mailfile, returns a MailTools::Message object
     def self.mailfile(filename)
-      msg = Qmail::Message.new
+      msg = MailTools::Message.new
       File.open(filename) do |f|
         while (rec = f.readline.chomp) > ""
           if rec =~ /\AMailfile (.+)/
@@ -82,7 +82,7 @@ module Qmail
       msg
     end
 
-    # Takes a Qmail::Message and a target path and filename. Serializes the
+    # Takes a MailTools::Message and a target path and filename. Serializes the
     # message to the given filename
     def save_mailfile(msg, filename)
       begin
@@ -95,7 +95,7 @@ module Qmail
         end
       rescue
       end
-      File.exist?(filename) ? Qmail::EXIT_OK : Qmail::ERRORS[53]
+      File.exist?(filename) ? MailTools::EXIT_OK : MailTools::ERRORS[53]
     end
 
     private
@@ -116,7 +116,7 @@ module Qmail
       opts
     end
 
-    # Renames file to the inode number, like qmail does in it's queue
+    # Renames file to the inode number, like mail_tools does in it's queue
     # Enable this if you want to keep identical messages separate.
     def rename_to_inode(filename)
       st = File::Stat.new(filename)

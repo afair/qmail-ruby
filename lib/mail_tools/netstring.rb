@@ -1,4 +1,4 @@
-module Qmail
+module MailTools
 
   # Returns the Netstring of the given string. It is defined at:
   #   http://cr.yp.to/proto/netstrings.txt
@@ -6,7 +6,7 @@ module Qmail
   #
   # Usage:
   #
-  #   Qmail::Netstring.of("qmail") #=> "5:qmail,"
+  #   MailTools::Netstring.of("mail_tools") #=> "5:mail_tools,"
   #
   # The Netstring is used mainly in QMQP Communications to encode
   # the message and envelope as:
@@ -14,7 +14,7 @@ module Qmail
   #  netstring(netstring(messagebody) + netstring(returnpath)
   #            + netstring(recipient) + ...)
   #
-  # Since Qmail/SMTP is 7-bit only, this string is expected to be
+  # Since MailTools/SMTP is 7-bit only, this string is expected to be
   # a 7-bit ASCII. Unpredictable results will occur if you send
   # UTF-8 (Unicode) or 8-bit extensions (ISP-8851-x).
 

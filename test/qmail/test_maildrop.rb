@@ -3,7 +3,7 @@ require_relative '../test_helper.rb'
 class TestMaildrop < MiniTest::Test
 
   def test_drop
-    r = Qmail::Maildrop.sendmail(basic_message, MAILDROP_DIR)
+    r = MailTools::Maildrop.sendmail(basic_message, MAILDROP_DIR)
     assert r.succeeded?
     assert File.exist?(r.info.first)
     f = File.readlines(r.info.first)

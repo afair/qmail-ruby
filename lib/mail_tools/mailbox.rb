@@ -1,4 +1,4 @@
-module Qmail
+module MailTools
 
   # Delivers a Message to a Mailbox File in mbox format:
   #
@@ -14,16 +14,16 @@ module Qmail
   class Mailbox
     include Enumerable
 
-    def self.sendmail(qmail_message, filepath)
-      Qmail::Mailbox.new(filepath).sendmail(qmail_message)
+    def self.sendmail(mail_tools_message, filepath)
+      MailTools::Mailbox.new(filepath).sendmail(mail_tools_message)
     end
 
     def initialize(filepath)
       @filepath = filepath
     end
 
-    def sendmail(qmail_message)
-      write_message(qmail_message)
+    def sendmail(mail_tools_message)
+      write_message(mail_tools_message)
     end
 
     def write_message(msg)
@@ -43,14 +43,14 @@ module Qmail
         while !f.eof
           line = f.gets.chomp
           if m = line.match(/\AFrom (\S+) (.+)/)
-            yield Qmail::Message.new(msg.gsub(/^\>(\>*From)/,'$1'), separator[1]), separator[2]
+            yield MailTools::Message.new(msg.gsub(/^\>(\>*From)/,'$1'), separator[1]), separator[2]
             msg = ''
             separator = m
           else
             msg += line + "\n"
           end
         end
-        yield Qmail::Message.new(msg, separator[1]) if msg > ' '
+        yield MailTools::Message.new(msg, separator[1]) if msg > ' '
       end
     end
 

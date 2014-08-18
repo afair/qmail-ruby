@@ -1,15 +1,15 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'qmail/version'
+require 'mail_tools/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "qmail"
-  spec.version       = Qmail::VERSION
+  spec.name          = "mail_tools"
+  spec.version       = MailTools::VERSION
   spec.authors       = ["Allen Fair"]
   spec.email         = ["allen.fair@gmail.com"]
-  spec.summary       = %q{Implements Qmail client interfaces in Ruby}
-  spec.description   = %q{The qmail gem gives interfaces to send mail with Qmail via queue, QMQP, and SMTP. }
+  spec.summary       = %q{A set of email handling and delivery utilities}
+  spec.description   = %q{A set of email handling and delivery utilities}
   spec.homepage      = ""
   spec.license       = "MIT"
 

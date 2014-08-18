@@ -1,23 +1,23 @@
 #!/bin/env/ruby
 ################################################################################
-# Ruby implementation of qmail-queue interface
+# Ruby implementation of mail_tools-queue interface
 #
 # 1) Read message body from FD 0 (STDIN) until EOF
 # 2) Read Envelope from Fd 1 (remapped from STDOUT)
 #    F + return_path +  "\0"
 #    T + return_path +  "\0" ...
 #    "\0"
-# 3) Exit with Qmail::EXIT_OK or Qmail::ERRORS[errno]
+# 3) Exit with MailTools::EXIT_OK or MailTools::ERRORS[errno]
 ################################################################################
 require 'rubygems'
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
-require 'qmail'
+require 'mail_tools'
 
 begin
   dbug = File.new("debug", 'w')
   dbug.sync = true
-  qmsg = Qmail::Message.new
+  qmsg = MailTools::Message.new
   dbug.puts "Starting..."
 
   dbug.puts "Message..."
@@ -52,4 +52,4 @@ end
 
 
 
-exit qmsg.message =~ /Subject/ && qmsg.return_path =~ /@/ ? Qmail::QMAIL_OK : Qmail::ERRORS[1]
+exit qmsg.message =~ /Subject/ && qmsg.return_path =~ /@/ ? MailTools::QMAIL_OK : MailTools::ERRORS[1]

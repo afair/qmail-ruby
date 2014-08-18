@@ -1,33 +1,33 @@
-module Qmail
+module MailTools
 
-  # Transfers a message to another mail server using Qmail's QMQP protocol.
+  # Transfers a message to another mail server using MailTools's QMQP protocol.
   #   http://cr.yp.to/proto/qmqp.html
   #
   # This is not intended as a delivery transport. It transfers the message
   # as a queue object (message, return path, recipients) to another server
-  # for delivery. The remote server runs a "qmail-qmqpd" daemon to accept
+  # for delivery. The remote server runs a "mail_tools-qmqpd" daemon to accept
   # the message. Postfix also ships with a QMQP listener so can be used as
   # the target MTA.
   #
   # Usage:
   #
-  #   Qmail::QMQP.sendmail(qmail_message) #=> Qmail::Result
+  #   MailTools::QMQP.sendmail(mail_tools_message) #=> MailTools::Result
   #
   class QMQP
 
-    def self.sendmail(qmail_message)
-      Qmail::QMQP.new(qmail_message).sendmail
+    def self.sendmail(mail_tools_message)
+      MailTools::QMQP.new(mail_tools_message).sendmail
     end
 
-    def initialize(qmail_message)
-      @qmsg = qmail_message
+    def initialize(mail_tools_message)
+      @qmsg = mail_tools_message
     end
 
-    def sendmail(qmail_message=nil)
-      @qmsg    = qmail_message if qmail_message
+    def sendmail(mail_tools_message=nil)
+      @qmsg    = mail_tools_message if mail_tools_message
       begin
         ip     = @qmsg.options[:ip]   || qmqp_server
-        port   = @qmsg.options[:port] || Qmail::Config.qmqp_port
+        port   = @qmsg.options[:port] || MailTools::Config.qmqp_port
         #p "opening socket to...", ip, port
         socket = TCPSocket.new(ip, port)
         #p "socket!", socket
@@ -37,16 +37,16 @@ module Qmail
           @response = socket.recv(1000)
         end
         socket.close
-        Qmail::Result.new(@qmsg, :qmqp, Qmail::EXIT_OK, @response, "#{ip}:#{port}")
+        MailTools::Result.new(@qmsg, :qmqp, MailTools::EXIT_OK, @response, "#{ip}:#{port}")
 
       rescue SocketError, SystemCallError => e
         socket.close if socket
-        Qmail::Result.new(@qmsg, :qmqp, Qmail::ERRORS[1], e.to_s, "#{ip}:#{port}")
+        MailTools::Result.new(@qmsg, :qmqp, MailTools::ERRORS[1], e.to_s, "#{ip}:#{port}")
       end
     end
 
     def qmqp_server(i=0)
-      dir = @qmsg.options[:qmail_dir] || Qmail::Config.qmail_dir
+      dir = @qmsg.options[:mail_tools_dir] || MailTools::Config.mail_tools_dir
       filename = "#{dir}/control/qmqpservers"
       return '127.0.0.1' unless File.exists?(filename)
       File.readlines(filename)[i].chomp

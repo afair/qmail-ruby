@@ -1,8 +1,8 @@
 require 'digest/md5'
 require 'json'
 
-module Qmail
-  # Constructs a Qmail Queue Message Oject. It is used as a standard interface
+module MailTools
+  # Constructs a MailTools Queue Message Oject. It is used as a standard interface
   # for classes in this library. A queue message has its payload data (also
   # named message within) which is a complete RFC822-style email message, with
   # full headers, bodies and attachments.
@@ -50,11 +50,11 @@ module Qmail
     # Sets the return path, and optionally alters it to the VERP format if enabled
     # That format is "returnpath-@domain-@[]" The hyphen before the @ will be inserted
     # unless another punctuation character (not alpha-numeric) is already there.
-    # The "-@[]" suffix is a signal for qmail to use VERP, and alter the return path
+    # The "-@[]" suffix is a signal for mail_tools to use VERP, and alter the return path
     # by inserting the recipient's mailbox, '=' and domain before the '@'
     # giving `me-you=example.com@example.com`
     def return_path=(email_address)
-      if (!!options.fetch(:verp) { Qmail::Config.verp })
+      if (!!options.fetch(:verp) { MailTools::Config.verp })
         email_address  = email_address.sub(/@/, '-@') if email_address =~ /\w@/
         email_address += '-@[]'
       end
@@ -67,7 +67,7 @@ module Qmail
     end
 
     def load_mailfile(filename)
-      m                = Qmail::Maildrop.mailfile(filename)
+      m                = MailTools::Maildrop.mailfile(filename)
       self.message     = m.message
       self.return_path = m.return_path
       self.recipients  = m.recipients
@@ -116,11 +116,11 @@ module Qmail
       self.options[:method] = :maildrop if self.options[:maildrop_dir]
       self.options[:method] = :http     if self.options[:http_url]
       self.options[:method] = :qmqp     if self.options[:ip]
-      self.options[:method] = :queue    if self.options[:qmail_queue]
+      self.options[:method] = :queue    if self.options[:mail_tools_queue]
     end
 
     # Calls the sendmail method on the proper protocol class. Returns a
-    # Qmail::Result Object with the response.
+    # MailTools::Result Object with the response.
     def sendmail(method=nil)
       method ||= self.options[:method] || :queue
       coerce_method
@@ -132,31 +132,31 @@ module Qmail
     end
 
     def queue
-      Qmail::Inject.sendmail(self)
+      MailTools::Inject.sendmail(self)
     end
 
     def qmqp
-      Qmail::QMQP.sendmail(self)
+      MailTools::QMQP.sendmail(self)
     end
 
     def smtp
-      Qmail::SMTP.sendmail(self)
+      MailTools::SMTP.sendmail(self)
     end
 
     def maildrop(dir=nil)
-      Qmail::Maildrop.sendmail(self, dir || self.options[:maildrop_dir])
+      MailTools::Maildrop.sendmail(self, dir || self.options[:maildrop_dir])
     end
 
     def mailbox(filename=nil)
-      Qmail::Mailbox.sendmail(self, filename || self.options[:mailbox])
+      MailTools::Mailbox.sendmail(self, filename || self.options[:mailbox])
     end
 
     def maildir(dir=nil)
-      Qmail::Maildir.sendmail(self, dir || self.options[:maildir])
+      MailTools::Maildir.sendmail(self, dir || self.options[:maildir])
     end
 
     def http(url=nil)
-      Qmail::HTTP.sendmail(self, url || self.options[:http_url])
+      MailTools::HTTP.sendmail(self, url || self.options[:http_url])
     end
 
     def recipient_file(filename)
@@ -167,10 +167,10 @@ module Qmail
 
     # Build netstring of messagebody+returnpath+recipient...
     def to_netstring
-      nstr = Qmail::Netstring.of(self.message+"\n")
-      nstr += Qmail::Netstring.of(self.return_path)
-      self.recipients.each { |r| nstr += Qmail::Netstring.of(r) }
-      Qmail::Netstring.of(nstr)
+      nstr = MailTools::Netstring.of(self.message+"\n")
+      nstr += MailTools::Netstring.of(self.return_path)
+      self.recipients.each { |r| nstr += MailTools::Netstring.of(r) }
+      MailTools::Netstring.of(nstr)
     end
 
     def to_md5

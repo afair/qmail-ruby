@@ -1,40 +1,40 @@
 require 'getoptlong'
 require 'socket'
 require 'yaml'
-require "qmail/config"
-require "qmail/http"
-require "qmail/inject"
-require "qmail/maildrop"
-require "qmail/message"
-require "qmail/netstring"
-require "qmail/qmqp"
-require "qmail/result"
-require "qmail/smtp"
-require "qmail/version"
+require "mail_tools/config"
+require "mail_tools/http"
+require "mail_tools/inject"
+require "mail_tools/maildrop"
+require "mail_tools/message"
+require "mail_tools/netstring"
+require "mail_tools/qmqp"
+require "mail_tools/result"
+require "mail_tools/smtp"
+require "mail_tools/version"
 
-# The Qmail module implements Qmail interation functions, usually as a client.
+# The MailTools module implements MailTools interation functions, usually as a client.
 # It is not intended to replace the full MTA.
-module Qmail
+module MailTools
 
   # Queues the message with the given envelope (return path and recipients)
-  # to the local qmail system, or remote system with the proper options.
+  # to the local mail_tools system, or remote system with the proper options.
   #
   # Usage:
-  #   Qmail.sendmail(message, return_path, recipients, options)
+  #   MailTools.sendmail(message, return_path, recipients, options)
   #      message     - String of Message Data (Headers + Bodies)
   #      return_path - email address to which undelivered email reports will be sent.
   #      recipients  - An list or array of email addresses
   #      options     - A hash of directives to control the queueing.
   #
-  # Returns: a Qmail::Result object
+  # Returns: a MailTools::Result object
   #
   # Options:
   #      method: "queue|qmqp|smtp|maildrop"
-  #        - Sends the qmail using one of these commands adhering to qmail-queue
+  #        - Sends the mail_tools using one of these commands adhering to mail_tools-queue
   #      ip: "127.0.0.1"
   #      port: 630
   #        - Ip address and port for QMQP (630) or SMTP (25) Communication
-  #        - qmail-qmqpc takes its default ip address from qmail/controls/qmqpservers.
+  #        - mail_tools-qmqpc takes its default ip address from mail_tools/controls/qmqpservers.
   #      recipient_file: "/path/file"
   #        - If specified, it adds recipient addresses, one per line, from that file.
   #      headers: true
@@ -48,10 +48,10 @@ module Qmail
   #              ...(remaining recipients, followed by blank line)
   #
   #              Message Data (Headers and Bodies as sent in the SMTP DATA command)
-  #      qmail_root: "dir"
-  #        - Directory where qmail is deployed (usually /var/qmail)
-  #      qmail_queue: "programfile"
-  #        - Alternate location for a program speaking the qmail-queue protocol
+  #      mail_tools_root: "dir"
+  #        - Directory where mail_tools is deployed (usually /var/mail_tools)
+  #      mail_tools_queue: "programfile"
+  #        - Alternate location for a program speaking the mail_tools-queue protocol
   #      logger: loggerobject
   #        - Logs messages here if specified
   #      maildrop_dir: dirname
@@ -59,7 +59,7 @@ module Qmail
   #          archived here for retry processing.
   #
   def self.sendmail(*message_args)
-    qmessage = Qmail::Message.new(*message_args)
+    qmessage = MailTools::Message.new(*message_args)
     qmessage.sendmail
   end
 
@@ -72,28 +72,28 @@ module Qmail
   #
   # To use this way, invoke this command from the command line or shell script:
   #
-  #     echo message | ruby -r qmail -e 'Qmail.command' -- -f return_path recipients...
+  #     echo message | ruby -r mail_tools -e 'MailTools.command' -- -f return_path recipients...
   #
-  # You may also pass in qmail message sending options:
+  # You may also pass in mail_tools message sending options:
   #   --method=queue|qmqp|smtp|maildrop|http|mailbox|maildir
   #   --ip=ipv4
   #   --port=integer
   #   --maildrop-dir=dirname
-  #   --qmail-queue=filename
-  #   --qmail-root/dirname
+  #   --mail_tools-queue=filename
+  #   --mail_tools-root/dirname
   #   --http-url=url
   #   --mailbox=filepath
   #   --maildir=dirname
   #  # To use a shell script, you can also send options with default delivery method
   #
   # sendmail.sh:
-  #     ruby -r qmail -e 'Qmail.command(method: :queue)' -- $*
+  #     ruby -r mail_tools -e 'MailTools.command(method: :queue)' -- $*
   #
   def self.command(options={})
     options, recipients = command_arguments(options)
     options[:mailhandle] ||= $stdin
     options[:f] ||= default_return_path
-    qmessage = Qmail::Message.new('', options[:f], recipients, options)
+    qmessage = MailTools::Message.new('', options[:f], recipients, options)
     qmessage.use_headers(false) # Only replace missing return_path, recipients
 
     qmessage.sendmail
@@ -102,19 +102,19 @@ module Qmail
   def self.command_arguments(options={})
     GetoptLong.new(
       ['-f',             GetoptLong::REQUIRED_ARGUMENT], # from (return_path)
-      ['--method',       GetoptLong::REQUIRED_ARGUMENT], # Options to Qmail::Message
+      ['--method',       GetoptLong::REQUIRED_ARGUMENT], # Options to MailTools::Message
       ['--ip',           GetoptLong::REQUIRED_ARGUMENT], #  " "
       ['--port',         GetoptLong::REQUIRED_ARGUMENT],
       ['--maildrop-dir', GetoptLong::REQUIRED_ARGUMENT],
-      ['--qmail-queue',  GetoptLong::REQUIRED_ARGUMENT],
-      ['--qmail-root',   GetoptLong::REQUIRED_ARGUMENT],
+      ['--mail_tools-queue',  GetoptLong::REQUIRED_ARGUMENT],
+      ['--mail_tools-root',   GetoptLong::REQUIRED_ARGUMENT],
       ['--http-url',     GetoptLong::REQUIRED_ARGUMENT],
       ['--mailbox',      GetoptLong::REQUIRED_ARGUMENT],
       ['--maildir',      GetoptLong::REQUIRED_ARGUMENT],
-      ['--qmailrc',      GetoptLong::REQUIRED_ARGUMENT],
+      ['--mail_toolsrc',      GetoptLong::REQUIRED_ARGUMENT],
     ).each {|opt, arg| options[opt.sub(/\A-+/,'').gsub(/\W/,'_').to_sym] =  arg }
     recipients = ARGV
-    options = load_qmailrc(options)
+    options = load_mail_toolsrc(options)
 
     [options, recipients]
   end
@@ -123,24 +123,24 @@ module Qmail
     (ENV['USER']||ENV['USERNAME']) + '@' + Socket.gethostname
   end
 
-  def self.load_qmailrc(options)
-    fn = options[:qmailrc] || "#{ENV["HOME"]}/.qmailrc"
+  def self.load_mail_toolsrc(options)
+    fn = options[:mail_toolsrc] || "#{ENV["HOME"]}/.mail_toolsrc"
     return options unless File.exists?(fn)
     yaml = YAML.load_file(fn)
     yaml.merge(options)
   end
 
   def self.maildrop(dir, *message_args)
-    qmessage = Qmail::Message.new(*message_args)
+    qmessage = MailTools::Message.new(*message_args)
     qmessage.maildrop(dir)
   end
 
   def self.log(level, *data)
-    return unless Qmail::Config.logger
-    Qmail::Config.logger.send(level, *data)
+    return unless MailTools::Config.logger
+    MailTools::Config.logger.send(level, *data)
   end
 
-  # These are process exit codes for Qmail delivery processing (see qmail-local)
+  # These are process exit codes for MailTools delivery processing (see mail_tools-local)
   EXIT_ERROR           = 1..98
   EXIT_PERMANENT_ERROR = 11..40
   EXIT_STOP            = 99     # Stop further  processing, mark as done
@@ -153,7 +153,7 @@ module Qmail
     'z' => EXIT_DEFER,          # Deferred, retry later
   }
 
-  # These are Qmail queueing errors
+  # These are MailTools queueing errors
   ERRORS = {
     0  => "Success",
     1  => "Unknown Error",
@@ -165,7 +165,7 @@ module Qmail
     54 => "Unable to read the message or envelope.",
     55 => "Unable to read a configuration file.",
     56 => "Problem making a network connection from this host.",
-    61 => "Problem with the qmail home directory.",
+    61 => "Problem with the mail_tools home directory.",
     62 => "Problem with the queue directory.",
     63 => "Problem with queue/pid.",
     64 => "Problem with queue/mess.",
