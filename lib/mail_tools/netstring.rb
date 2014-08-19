@@ -21,14 +21,30 @@ module MailTools
   class Netstring
 
     # Encodes the given string as a netstring
-    def self.of(str)
+    def self.encode(str)
        "#{str.size}:#{str},"
     end
 
-    # Returns the string encoded within a netstring, or returns original
-    # if not a netstring
-    def self.value(str)
-      str =~ /\A(\d+):(.*),\z/ ? $1 : str
+    # Takes a netstring, returns a pair of the [string, remainder]
+    # returns nil on a bad netstring format
+    def self.decode(netstring)
+      len = netstring.to_i
+      if netstring && netstring =~ /\A\d+:(.{#{len}}),(.*)/m
+        [$1, $2]
+      else
+        nil # bad String
+      end
+    end
+
+    # Take a string containing concatenated netstrings, return array of
+    # decoded strings
+    def self.decode_list(list)
+      strings = []
+      while list
+        s, list = decode(list)
+        strings << s if s
+      end
+      strings
     end
   end
 end

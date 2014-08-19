@@ -34,7 +34,7 @@ module MailTools
 
     # "23:Kok 1182362995 qp 21894," (if it's a netstring)
     def response=(r)
-      @response = r = MailTools::Netstring.value(r||"")
+      @response = r = MailTools::Netstring.decode(r||"")
       return if response.nil? || response == ""
 
       if m = r.to_s.match(/\A\d+:([KZD]) (.+) qp (.+)/i)

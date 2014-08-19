@@ -29,4 +29,25 @@ class TestMessage < MiniTest::Test
     m = basic_message(nil, nil, verp:true)
     assert_equal 'me-@example.com-@[]', m.return_path
   end
+
+  def test_netstring
+    m = basic_message
+    ns = m.to_netstring
+    m2 = MailTools::Message.from_netstring(ns)
+    assert_equal m.message, m2.message.chomp
+  end
+
+  def test_string
+    m = basic_message
+    s = m.to_s
+    m2 = MailTools::Message.from_string(s)
+    assert_equal m.message, m2.message.chomp #to_netstring add \n
+  end
+
+  def test_json
+    m = basic_message
+    s = m.to_json
+    m2 = MailTools::Message.from_json(s)
+    assert_equal m.message, m2.message
+  end
 end

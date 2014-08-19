@@ -3,7 +3,7 @@ require 'socket'
 require 'yaml'
 require "mail_tools/config"
 require "mail_tools/http"
-require "mail_tools/inject"
+require "mail_tools/qmail/inject"
 require "mail_tools/maildrop"
 require "mail_tools/message"
 require "mail_tools/netstring"
@@ -63,72 +63,6 @@ module MailTools
     qmessage.sendmail
   end
 
-  # Implements the basic Sendmail command line to send email
-  #
-  #     echo message | sendmail -f return_path recipients ...
-  #
-  # If return path or recipients are not provided, they are taken
-  # from the message
-  #
-  # To use this way, invoke this command from the command line or shell script:
-  #
-  #     echo message | ruby -r mail_tools -e 'MailTools.command' -- -f return_path recipients...
-  #
-  # You may also pass in mail_tools message sending options:
-  #   --method=queue|qmqp|smtp|maildrop|http|mailbox|maildir
-  #   --ip=ipv4
-  #   --port=integer
-  #   --maildrop-dir=dirname
-  #   --mail_tools-queue=filename
-  #   --mail_tools-root/dirname
-  #   --http-url=url
-  #   --mailbox=filepath
-  #   --maildir=dirname
-  #  # To use a shell script, you can also send options with default delivery method
-  #
-  # sendmail.sh:
-  #     ruby -r mail_tools -e 'MailTools.command(method: :queue)' -- $*
-  #
-  def self.command(options={})
-    options, recipients = command_arguments(options)
-    options[:mailhandle] ||= $stdin
-    options[:f] ||= default_return_path
-    qmessage = MailTools::Message.new('', options[:f], recipients, options)
-    qmessage.use_headers(false) # Only replace missing return_path, recipients
-
-    qmessage.sendmail
-  end
-
-  def self.command_arguments(options={})
-    GetoptLong.new(
-      ['-f',             GetoptLong::REQUIRED_ARGUMENT], # from (return_path)
-      ['--method',       GetoptLong::REQUIRED_ARGUMENT], # Options to MailTools::Message
-      ['--ip',           GetoptLong::REQUIRED_ARGUMENT], #  " "
-      ['--port',         GetoptLong::REQUIRED_ARGUMENT],
-      ['--maildrop-dir', GetoptLong::REQUIRED_ARGUMENT],
-      ['--mail_tools-queue',  GetoptLong::REQUIRED_ARGUMENT],
-      ['--mail_tools-root',   GetoptLong::REQUIRED_ARGUMENT],
-      ['--http-url',     GetoptLong::REQUIRED_ARGUMENT],
-      ['--mailbox',      GetoptLong::REQUIRED_ARGUMENT],
-      ['--maildir',      GetoptLong::REQUIRED_ARGUMENT],
-      ['--mail_toolsrc',      GetoptLong::REQUIRED_ARGUMENT],
-    ).each {|opt, arg| options[opt.sub(/\A-+/,'').gsub(/\W/,'_').to_sym] =  arg }
-    recipients = ARGV
-    options = load_mail_toolsrc(options)
-
-    [options, recipients]
-  end
-
-  def self.default_return_path
-    (ENV['USER']||ENV['USERNAME']) + '@' + Socket.gethostname
-  end
-
-  def self.load_mail_toolsrc(options)
-    fn = options[:mail_toolsrc] || "#{ENV["HOME"]}/.mail_toolsrc"
-    return options unless File.exists?(fn)
-    yaml = YAML.load_file(fn)
-    yaml.merge(options)
-  end
 
   def self.maildrop(dir, *message_args)
     qmessage = MailTools::Message.new(*message_args)
@@ -140,7 +74,7 @@ module MailTools
     MailTools::Config.logger.send(level, *data)
   end
 
-  # These are process exit codes for MailTools delivery processing (see mail_tools-local)
+  # These are process exit codes for Qmail delivery processing (see mail_tools-local)
   EXIT_ERROR           = 1..98
   EXIT_PERMANENT_ERROR = 11..40
   EXIT_STOP            = 99     # Stop further  processing, mark as done

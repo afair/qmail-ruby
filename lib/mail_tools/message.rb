@@ -109,54 +109,18 @@ module MailTools
       self.message = head + "\n" + body
     end
     
-    # Changes method based on co-requisit options
-    def coerce_method
-      self.options[:method] = :mailbox  if self.options[:mailbox]
-      self.options[:method] = :maildir  if self.options[:maildir]
-      self.options[:method] = :maildrop if self.options[:maildrop_dir]
-      self.options[:method] = :http     if self.options[:http_url]
-      self.options[:method] = :qmqp     if self.options[:ip]
-      self.options[:method] = :queue    if self.options[:mail_tools_queue]
-    end
-
     # Calls the sendmail method on the proper protocol class. Returns a
     # MailTools::Result Object with the response.
-    def sendmail(method=nil)
-      method ||= self.options[:method] || :queue
-      coerce_method
-      if [:queue, :qmqp, :smtp, :maildrop, :http, :mailbox, :maildir].include?(method)
-        send(method)
+    def sendmail(method=nil, &block)
+      if block
+        block.call(self)
+      elsif self.options[:method].respond_to?(:sendmail)
+        self.options[:method].sendmail(self)
+      elsif self.options[:method].is_a?(Proc)
+        self.options[:method].call(self)
       else
-        raise "Unknown mailing method: #{method}"
+        raise "Unknown mailing method"
       end
-    end
-
-    def queue
-      MailTools::Inject.sendmail(self)
-    end
-
-    def qmqp
-      MailTools::QMQP.sendmail(self)
-    end
-
-    def smtp
-      MailTools::SMTP.sendmail(self)
-    end
-
-    def maildrop(dir=nil)
-      MailTools::Maildrop.sendmail(self, dir || self.options[:maildrop_dir])
-    end
-
-    def mailbox(filename=nil)
-      MailTools::Mailbox.sendmail(self, filename || self.options[:mailbox])
-    end
-
-    def maildir(dir=nil)
-      MailTools::Maildir.sendmail(self, dir || self.options[:maildir])
-    end
-
-    def http(url=nil)
-      MailTools::HTTP.sendmail(self, url || self.options[:http_url])
     end
 
     def recipient_file(filename)
@@ -167,10 +131,17 @@ module MailTools
 
     # Build netstring of messagebody+returnpath+recipient...
     def to_netstring
-      nstr = MailTools::Netstring.of(self.message+"\n")
-      nstr += MailTools::Netstring.of(self.return_path)
-      self.recipients.each { |r| nstr += MailTools::Netstring.of(r) }
-      MailTools::Netstring.of(nstr)
+      nstr  = MailTools::Netstring.encode(self.message+"\n")
+      nstr += MailTools::Netstring.encode(self.return_path)
+      self.recipients.each { |r| nstr += MailTools::Netstring.encode(r) }
+      MailTools::Netstring.encode(nstr)
+    end
+
+    # Instantiate a message from a message qmqp netstring
+    def self.from_netstring(netstring)
+      qmqp_msg, _ = Netstring.decode(netstring)
+      body, rp, *recip = MailTools::Netstring::decode_list(qmqp_msg)
+      new(body, rp, recip)
     end
 
     def to_md5
@@ -183,8 +154,20 @@ module MailTools
        recipients:self.recipients}.to_json
     end
 
+    def self.from_json(json_string)
+      o = JSON.parse(json_string)
+      new(o["message"], o["return_path"], o["recipients"])
+    end
+
     def to_s
       [self.return_path, *self.recipients, "", self.message].join("\n")
+    end
+
+    # Returns in instance of the message created with the to_s format
+    def self.from_string(s)
+      envelope, message = s.split("\n\n", 2)
+      return_path, *recipients = envelope.split("\n")
+      new(message, return_path, recipients)
     end
 
     private

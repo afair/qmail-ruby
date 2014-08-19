@@ -15,43 +15,76 @@ module MailTools
   #
   class QMQP
 
-    def self.sendmail(mail_tools_message)
-      MailTools::QMQP.new(mail_tools_message).sendmail
+    def self.sendmail(msg)
+      MailTools::QMQP.new(msg).sendmail
     end
 
-    def initialize(mail_tools_message)
-      @qmsg = mail_tools_message
+    def initialize(msg)
+      @msg = msg
     end
 
     def sendmail(mail_tools_message=nil)
-      @qmsg    = mail_tools_message if mail_tools_message
+      @msg    = mail_tools_message if mail_tools_message
       begin
-        ip     = @qmsg.options[:ip]   || qmqp_server
-        port   = @qmsg.options[:port] || MailTools::Config.qmqp_port
-        #p "opening socket to...", ip, port
+        ip     = @msg.options[:ip]   || qmqp_server
+        port   = @msg.options[:port] || MailTools::Config.qmqp_port
         socket = TCPSocket.new(ip, port)
-        #p "socket!", socket
         if socket
-          socket.send(@qmsg.to_netstring, 0)
-          #p "waiting fore response"
+          socket.send(@msg.to_netstring, 0)
+          socket.close_write
           @response = socket.recv(1000)
         end
         socket.close
-        MailTools::Result.new(@qmsg, :qmqp, MailTools::EXIT_OK, @response, "#{ip}:#{port}")
+        MailTools::Result.new(@msg, :qmqp, MailTools::EXIT_OK, @response, "#{ip}:#{port}")
 
       rescue SocketError, SystemCallError => e
         socket.close if socket
-        MailTools::Result.new(@qmsg, :qmqp, MailTools::ERRORS[1], e.to_s, "#{ip}:#{port}")
+        MailTools::Result.new(@msg, :qmqp, MailTools::ERRORS[1], e.to_s, "#{ip}:#{port}")
       end
     end
 
+    # Returns the configured QMQP server ip address
     def qmqp_server(i=0)
-      dir = @qmsg.options[:mail_tools_dir] || MailTools::Config.mail_tools_dir
+      dir = @msg.options[:mail_tools_dir] || MailTools::Config.mail_tools_dir
       filename = "#{dir}/control/qmqpservers"
       return '127.0.0.1' unless File.exists?(filename)
       File.readlines(filename)[i].chomp
     end
 
+    # Takes a socket with an incoming qmqp message, returns the message
+    def self.receive_mail(io)
+      b = ''
+      while (ch = io.read(1)) =~ /\d/
+        b += ch
+      end
+      msg = io.read(b.to_i)
+      message = Message.from_netstring("#{b}:" + msg + ',')
+
+      if message
+        io.puts MailTools::Netstring.encode("Kok #{Time.now.to_i} qp #{$$}")
+      else
+        io.puts MailTools::Netstring.encode("DError in message")
+      end
+
+      message
+    end
+
+    # Simple server, for prototyping
+    def self.server(port=MailTools::Config.qmqp_port, max_accepts=-1, &block)
+      begin
+        server = TCPServer.new(MailTools::Config.qmqp_ip||"127.0.0.1", port)
+        while max_accepts != 0
+          Thread.start(server.accept) do |client|
+            msg = receive_mail(client)
+            client.close
+            block.call(msg) if msg
+            max_accepts -= 1
+          end
+        end
+      rescue Exception => e
+        puts "Exception! #{e}"
+      end
+    end
   end
 
 end
