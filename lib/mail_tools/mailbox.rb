@@ -14,15 +14,15 @@ module MailTools
   class Mailbox
     include Enumerable
 
-    def self.sendmail(mail_tools_message, filepath)
-      MailTools::Mailbox.new(filepath).sendmail(mail_tools_message)
+    def self.mail(mail_tools_message, filepath)
+      MailTools::Mailbox.new(filepath).mail(mail_tools_message)
     end
 
     def initialize(filepath)
       @filepath = filepath
     end
 
-    def sendmail(mail_tools_message)
+    def mail(mail_tools_message)
       write_message(mail_tools_message)
     end
 
@@ -30,6 +30,9 @@ module MailTools
       File.open(@filepath,'a') do |f|
         f.flock(File::LOCK_EX)
         f.puts "From #{msg.return_path} #{Time.new.strftime("%a %b %e %H:%M:%S %Y")}"
+        msg.recipients.each do |r|
+          f.puts "Delivered-To: #{r}"
+        end
         f.puts msg.message.gsub(/^(\>*From )/, '\>$1'), "\n"
       end
     end
@@ -78,4 +81,4 @@ module MailTools
     alias :count :size
 
   end
-End
+end

@@ -11,19 +11,19 @@ module MailTools
   #
   # Usage:
   #
-  #   MailTools::QMQP.sendmail(mail_tools_message) #=> MailTools::Result
+  #   MailTools::QMQP.mail(mail_tools_message) #=> MailTools::Result
   #
   class QMQP
 
-    def self.sendmail(msg)
-      MailTools::QMQP.new(msg).sendmail
+    def self.mail(msg)
+      MailTools::QMQP.new(msg).mail
     end
 
     def initialize(msg)
       @msg = msg
     end
 
-    def sendmail(mail_tools_message=nil)
+    def mail(mail_tools_message=nil)
       @msg    = mail_tools_message if mail_tools_message
       begin
         ip     = @msg.options[:ip]   || qmqp_server
@@ -52,7 +52,7 @@ module MailTools
     end
 
     # Takes a socket with an incoming qmqp message, returns the message
-    def self.receive_mail(io)
+    def self.receive(io)
       b = ''
       while (ch = io.read(1)) =~ /\d/
         b += ch
@@ -75,7 +75,7 @@ module MailTools
         server = TCPServer.new(MailTools::Config.qmqp_ip||"127.0.0.1", port)
         while max_accepts != 0
           Thread.start(server.accept) do |client|
-            msg = receive_mail(client)
+            msg = receive(client)
             client.close
             block.call(msg) if msg
             max_accepts -= 1

@@ -11,7 +11,6 @@ module MailTools
   #
   # The mailfile is of the format:
   #    Mailfile --option=value ....               [Optional]
-  #    returnpath@example.com
   #    recipient1@example.com                     [Recipients, 1 per line]
   #    ...
   #                                               [Blank line]
@@ -19,8 +18,12 @@ module MailTools
   #
   class Maildrop
     
-    def self.sendmail(mail_tools_message, dir)
-      MailTools::Maildrop.new(dir).sendmail(mail_tools_message)
+    def self.mail(mail_tools_message, dir)
+      MailTools::Maildrop.new(dir).mail(mail_tools_message)
+    end
+
+    def self.receive
+      MailTools::Maildrop.new(dir).receive
     end
 
     def initialize(dir)
@@ -29,7 +32,7 @@ module MailTools
       @dir = dir
     end
 
-    def sendmail(mail_tools_message)
+    def mail(mail_tools_message)
       filename = @dir + File::SEPARATOR + mail_tools_message.to_md5
       rc = save_mailfile(mail_tools_message, filename)
       filename = rename_to_inode(filename) if MailTools::Config.maildrop_inode
@@ -42,9 +45,9 @@ module MailTools
     # the Mailfile from the Maildrop, or false to keep the file to retry later.
     #
     # Example Usage:
-    #   MailTools::Maildrop.new(dir).pickup {|m| MailTools::Inject.sendmail(m) }
+    #   MailTools::Maildrop.new(dir).receive {|m| MailTools::Inject.mail(m) }
     #
-    def pickup
+    def receive
       Dir.new(@dir).each do |filename|
         if filename =~ /\A\w/ # Not a . or .. 
           path = @dir + File::SEPARATOR + filename

@@ -5,6 +5,7 @@ require "mail_tools/config"
 require "mail_tools/http"
 require "mail_tools/qmail/inject"
 require "mail_tools/maildrop"
+require "mail_tools/mailbox"
 require "mail_tools/message"
 require "mail_tools/netstring"
 require "mail_tools/qmqp"
@@ -20,7 +21,7 @@ module MailTools
   # to the local mail_tools system, or remote system with the proper options.
   #
   # Usage:
-  #   MailTools.sendmail(message, return_path, recipients, options)
+  #   MailTools.mail(message, return_path, recipients, options)
   #      message     - String of Message Data (Headers + Bodies)
   #      return_path - email address to which undelivered email reports will be sent.
   #      recipients  - An list or array of email addresses
@@ -55,12 +56,12 @@ module MailTools
   #      logger: loggerobject
   #        - Logs messages here if specified
   #      maildrop_dir: dirname
-  #        - Directory for maildrop operations. Failed sendmails can also be
+  #        - Directory for maildrop operations. Failed mail can also be
   #          archived here for retry processing.
   #
-  def self.sendmail(*message_args)
+  def self.mail(*message_args)
     qmessage = MailTools::Message.new(*message_args)
-    qmessage.sendmail
+    qmessage.mail
   end
 
 
