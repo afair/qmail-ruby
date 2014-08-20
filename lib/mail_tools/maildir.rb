@@ -19,8 +19,8 @@ module MailTools
     INFO = {'P'=>'Passed/Resent/Forwarded/Bounced', 'R'=>'Replied', 'S'=>'Seen',
             'T'=>'Trashed', 'D'=>'Draft', 'F'=>'Flagged'}
 
-    def self.sendmail(mail_tools_message, dir)
-      MailTools::Maildir.new(dir).sendmail(mail_tools_message)
+    def self.deliver(mail_tools_message, dir)
+      MailTools::Maildir.new(dir).deliver(mail_tools_message)
     end
 
     def self.create(dir)
@@ -43,29 +43,29 @@ module MailTools
       @dir = dir
     end
 
-    def sendmail(mail_tools_message)
-      write_message(mail_tools_message)
-    end
-
     # Adds message to maildir. First, we write to dir/tmp/uniquename, then move to 
-    # dir/new for MUA to pickup.
-    def write_message(msg)
-      until !File.exists?(File.join(@dir, 'new', fname))
+    # dir/new for MUA to receive.
+    # Returns filename of message
+    def deliver(msg)
+      fname = nil
+      loop do
         fname = [Time.now.to_i, rand(99999), Socket.gethostname].join('.')
+        break unless File.exists?(File.join(@dir, 'new', fname))
       end
-      File.open(File.join(@dir, 'tmp', fname)) do |f|
+      File.open(File.join(@dir, 'tmp', fname), 'w') do |f|
         f.puts "Return-Path: <#{msg.return_path}>"
-        msg.recipients.each { |recip| f.puts "Delivered-To: <#{recip}>" }
+        msg.recipients.each { |recip| f.puts "Delivered-To: #{recip}" }
         f.puts msg.message
       end
       File.rename(File.join(@dir, 'tmp', fname), File.join(@dir, 'new', fname))
+      File.join(@dir, 'new', fname)
     end
 
     # Yields each new message with Message and Filename
-    def pickup
+    def receive
       Dir.new(File.join(@dir,'new')).each do |filename|
         if filename =~ /\A\w/ # Not a . or .. 
-          n = File.join(@dir, filename)
+          n = File.join(@dir, 'new', filename)
           c = n.sub('/new/', '/cur/')
           c += ':2,'
           File.rename(n, c)

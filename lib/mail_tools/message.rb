@@ -41,8 +41,8 @@ module MailTools
     end
 
     # Reads a message from a file, uses From/To headers for return path and recipients.
-    def self.read(filename, options)
-      msg = Message.new(options.merge(mailfile:filename))
+    def self.read(filename, options={})
+      msg = Message.new(File.read(filename), options)
       msg.use_headers
       msg
     end
@@ -97,7 +97,7 @@ module MailTools
       headers   = {}
       headlines.each do |h|
         n,v = h.chomp.split(/:\s*/, 2)
-        headers[n.downcase.to_sym] = v.gsub(/\n\s*/, ' ')
+        headers[n.downcase.gsub(/\W/, '_').to_sym] = v.gsub(/\n\s*/, ' ')
       end
       headers
     end
