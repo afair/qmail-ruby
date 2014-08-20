@@ -18,8 +18,8 @@ module MailTools
   #
   class Maildrop
     
-    def self.mail(mail_tools_message, dir)
-      MailTools::Maildrop.new(dir).mail(mail_tools_message)
+    def self.deliver(mail_tools_message, dir)
+      MailTools::Maildrop.new(dir).deliver(mail_tools_message)
     end
 
     def self.receive
@@ -32,7 +32,7 @@ module MailTools
       @dir = dir
     end
 
-    def mail(mail_tools_message)
+    def deliver(mail_tools_message)
       filename = @dir + File::SEPARATOR + mail_tools_message.to_md5
       rc = save_mailfile(mail_tools_message, filename)
       filename = rename_to_inode(filename) if MailTools::Config.maildrop_inode
@@ -45,7 +45,7 @@ module MailTools
     # the Mailfile from the Maildrop, or false to keep the file to retry later.
     #
     # Example Usage:
-    #   MailTools::Maildrop.new(dir).receive {|m| MailTools::Inject.mail(m) }
+    #   MailTools::Maildrop.new(dir).receive {|m| MailTools::Inject.deliver(m) }
     #
     def receive
       Dir.new(@dir).each do |filename|

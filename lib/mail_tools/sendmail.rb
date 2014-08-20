@@ -67,5 +67,13 @@ module MailTools
       yaml = YAML.load_file(fn)
       yaml.merge(options)
     end
+
+    def self.deliver(msg)
+      
+    end
+
+    def deliver(msg)
+      
+    end
   end
 end

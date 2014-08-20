@@ -3,7 +3,7 @@ require_relative '../test_helper.rb'
 class TestMaildrop < MiniTest::Test
 
   def test_drop
-    r = MailTools::Maildrop.mail(basic_message, MAILDROP_DIR)
+    r = MailTools::Maildrop.deliver(basic_message, MAILDROP_DIR)
     assert r.succeeded?
     assert File.exist?(r.info.first)
     f = File.readlines(r.info.first)
@@ -16,7 +16,7 @@ class TestMaildrop < MiniTest::Test
   def test_receive
     m = basic_message
     d = maildrop
-    r= d.mail(m)
+    r= d.deliver(m)
     m2 = nil
     d.receive { |msgin| m2 = msgin; true }
     assert_equal m.to_s, m2.to_s

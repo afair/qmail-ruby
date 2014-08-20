@@ -6,19 +6,19 @@ module MailTools
 
   # Sends Email via SMTP
   # Usage:
-  #   MailTools::Qmail::SMTP.mail(mailtools_message)
+  #   MailTools::Qmail::SMTP.deliver(mailtools_message)
   #
   class SMTP
 
-    def self.mail(msg)
-      MailTools::SMTP.new(msg).mail
+    def self.deliver(msg)
+      MailTools::SMTP.new.deliver(msg)
     end
 
     def initialize(msg)
       @msg = msg
     end
 
-    def mail(threads=10)
+    def deliver(msg, threads=10)
       queue = Queue.new
       @msg.recipients.each { |r| queue << r }
       semaphore = Mutex.new
@@ -63,7 +63,7 @@ module MailTools
     end
 
     # Takes a socket with an incoming qmqp message, returns the message
-    def self.receive_mail(io)
+    def self.receive(io)
       Message.new(message, return_path, recipients)
     end
 
@@ -111,7 +111,7 @@ module MailTools
         server = TCPServer.new(MailTools::Config.smtp_ip||"127.0.0.1", port||25)
         while max_accepts != 0
           Thread.start(server.accept) do |client|
-            msg = receive_mail(client)
+            msg = receive(client)
             client.close
             block.call(msg) if msg
             max_accepts -= 1

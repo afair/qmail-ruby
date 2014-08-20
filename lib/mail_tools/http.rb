@@ -3,34 +3,35 @@ require 'net/http'
 module MailTools
   class HTTP
 
-    def self.sendmail(mail_tools_message, url)
-      MailTools::HTTP.new(mail_tools_message, url).sendmail
+    def self.deliver(mail_tools_message, url, options={})
+      MailTools::HTTP.new(url, options).deliver(mail_tools_message)
     end
 
-    def initialize(mail_tools_message, url=nil, http_lib=Net::HTTP)
-      @qmsg     = mail_tools_message
-      @url      = url || @qmsg.options[:http_url]
-      @http_lib = http_lib
+    def initialize(url, options={})
+      @url      = url
+      @options  = options
+      @http_lib = options[:http_lib] || Net::HTTP
     end
 
     # Makes the HTTP Call, returns a MailTools::Result object
-    def sendmail
+    def deliver(msg)
       begin
-        uri     = URI(@url)
-        request = (@qmsg.options[:json_extra] || {}).merge(
-                  {return_path:@qmsg.return_path,
-                   recipients: @qmsg.recipients,
-                   message:    @qmsg.message})
-        res     = @http_lib.post_form(uri, request)
-        ok      = res.code.to_i < 300 ? MailTools::EXIT_OK : MailTools::ERRORS[1]
-        MailTools::Result.new(@qmsg, :http, ok, res.message, res.body)
+        request = (@options[:params] || {}).merge(
+                  {return_path:msg.return_path,
+                   recipients: msg.recipients,
+                   message:    msg.message})
+
+        res     = @http_lib.post_form(URI(@url), request)
+        ok      = res.code.to_i < 300 ? MailTools::EXIT_OK : MailTools::EXIT_ERROR.first
+        MailTools::Result.new(msg, :http, ok, res.message, res.body)
       rescue SocketError => e
         res = e
-        MailTools::Result.new(@qmsg, :http, MailTools::EXIT_ERROR, e.message)
+        MailTools::Result.new(msg, :http, MailTools::EXIT_ERROR, e.message)
       end
     end
 
-    def receive
+    def receive(params)
+      Message.new(params[:message], params[:return_path], params[:recipients])
     end
   end
 end

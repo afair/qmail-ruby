@@ -11,19 +11,19 @@ module MailTools
   #
   # Usage:
   #
-  #   MailTools::QMQP.mail(mail_tools_message) #=> MailTools::Result
+  #   MailTools::QMQP.deliver(mail_tools_message) #=> MailTools::Result
   #
   class QMQP
 
-    def self.mail(msg)
-      MailTools::QMQP.new(msg).mail
+    def self.deliver(msg)
+      MailTools::QMQP.new(msg).deliver
     end
 
     def initialize(msg)
       @msg = msg
     end
 
-    def mail(mail_tools_message=nil)
+    def deliver(mail_tools_message=nil)
       @msg    = mail_tools_message if mail_tools_message
       begin
         ip     = @msg.options[:ip]   || qmqp_server

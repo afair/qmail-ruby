@@ -15,7 +15,7 @@ class TestQMQP < MiniTest::Test
     m = basic_message
     MailTools::Config.qmqp_port = 6280
     run_qmqp_server
-    r = MailTools::QMQP.sendmail(m)
+    r = MailTools::QMQP.deliver(m)
     p r unless r.succeeded?
     assert r.succeeded?, "Unsuccessful"
     p @qmqpmsg
