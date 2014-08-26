@@ -108,7 +108,7 @@ module MailTools
       head = headlines.reject { |h| h =~ /\ABcc:/i }.join("\n")
       self.message = head + "\n" + body
     end
-    
+
     # Calls the sendmail method on the proper protocol class. Returns a
     # MailTools::Result Object with the response.
     def sendmail(method=nil, &block)

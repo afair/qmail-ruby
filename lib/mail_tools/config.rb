@@ -6,9 +6,24 @@ module MailTools
   #   do_somthing() if MailTools::Config.setting == "value"
   class Config
     @options = {
-      qmail_dir:   "/var/qmail",
-      qmail_queue: "/var/qmail/bin/qmail-queue",
-      qmqp_port:   628,
+      qmail: {
+        dir:         "/var/qmail",
+        queue:       "/var/qmail/bin/qmail-queue",
+        qmqp_server: "localhost",
+        qmqp_port:   628,
+      },
+      smtp: {
+        host:        "localhost",
+        port:        25,
+        user:        ENV['SMTP_USER'],
+        password:    ENV['SMTP_PASSWORD'],
+        threads:     10,
+      },
+      sendmail: {},
+      maildrop: {},
+      maildir: {},
+      mailbox: {},
+      http: {},
     }
 
     def self.options

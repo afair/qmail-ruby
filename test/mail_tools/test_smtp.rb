@@ -20,7 +20,7 @@ class TestSMTP < MiniTest::Test
   def test_smtp
     m = basic_message
     MailTools::Config.smtp_class = SMTPTester
-    MailTools::SMTP.sendmail(m)
+    MailTools::SMTP.deliver(m)
     assert_equal m.recipients.first, SMTPTester.sent[2]
   end
 

@@ -10,56 +10,53 @@ module MailTools
   #
   class SMTP
 
-    def self.deliver(msg)
-      MailTools::SMTP.new.deliver(msg)
+    def self.deliver(msg, options={})
+      MailTools::SMTP.new(options).deliver(msg)
     end
 
-    def initialize(msg)
-      @msg = msg
+    def initialize(options)
+      @options = MailTools::Config.smtp.merge(options)
     end
 
-    def deliver(msg, threads=10)
+    def deliver(msg)
       queue = Queue.new
-      @msg.recipients.each { |r| queue << r }
+      msg.recipients.each { |r| queue << r }
       semaphore = Mutex.new
       results = []
 
-      workers = (0..threads).map do
+      workers = (0..(@options[:threads]||10)).map do
         Thread.new do
           begin
             while r = queue.pop(true)
-              result = smtp_recipient(r)
+              result = smtp_recipient(msg, r)
               semaphore.synchronize { results << result }
             end
           rescue ThreadError
           end
         end
       end
-      workers.map(&:join); 
+      workers.map(&:join);
       results
     end
 
-    def smtp_recipient(recip)
+    def smtp_recipient(msg, recip)
       begin
         _, recip_host = recip.split(/@/,2)
         helo_host = MailTools::Config.smtp_helo_host || `hostname`.chomp
         smtp_class= MailTools::Config.smtp_class || Net::SMTP
         resp = smtp_class.start(recip_host, 25, helo_host) do |smtp|
-          smtp.send_message(@msg.message, @msg.return_path, recip)
+          smtp.send_message(msg.message, msg.return_path, recip)
         end
         resp
       rescue SocketError, SystemCallError => e
         socket.close if socket
-        MailTools::Result.new(@msg, :qmqp, MailTools::ERRORS[1], e.to_s, "#{ip}:#{port}")
+        MailTools::Result.new(msg, :qmqp, MailTools::ERRORS[1], e.to_s, "#{ip}:#{port}")
       end
     end
 
-    # Returns the configured QMQP server ip address
-    def qmqp_server(i=0)
-      dir = @msg.options[:mail_tools_dir] || MailTools::Config.mail_tools_dir
-      filename = "#{dir}/control/qmqpservers"
-      return '127.0.0.1' unless File.exists?(filename)
-      File.readlines(filename)[i].chomp
+    # Delivers with relay to outgoing SMTP host. Not to end users.
+    def relay
+      raise "Not Implemented yet"
     end
 
     # Takes a socket with an incoming qmqp message, returns the message

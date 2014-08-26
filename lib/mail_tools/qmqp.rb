@@ -15,37 +15,38 @@ module MailTools
   #
   class QMQP
 
-    def self.deliver(msg)
-      MailTools::QMQP.new(msg).deliver
+    def self.deliver(msg, options={})
+      MailTools::QMQP.new(options).deliver(msg)
     end
 
-    def initialize(msg)
-      @msg = msg
+    def initialize(options={})
+      @options = MailTools::Config.qmail.merge(options)
     end
 
     def deliver(mail_tools_message=nil)
-      @msg    = mail_tools_message if mail_tools_message
+      msg    = mail_tools_message if mail_tools_message
       begin
-        ip     = @msg.options[:ip]   || qmqp_server
-        port   = @msg.options[:port] || MailTools::Config.qmqp_port
+        ip     = msg.options[:ip]   || qmqp_server
+        port   = msg.options[:port] || MailTools::Config.qmqp_port
         socket = TCPSocket.new(ip, port)
         if socket
-          socket.send(@msg.to_netstring, 0)
+          socket.send(msg.to_netstring, 0)
           socket.close_write
           @response = socket.recv(1000)
         end
         socket.close
-        MailTools::Result.new(@msg, :qmqp, MailTools::EXIT_OK, @response, "#{ip}:#{port}")
+        MailTools::Result.new(msg, :qmqp, MailTools::EXIT_OK, @response, "#{ip}:#{port}")
 
       rescue SocketError, SystemCallError => e
         socket.close if socket
-        MailTools::Result.new(@msg, :qmqp, MailTools::ERRORS[1], e.to_s, "#{ip}:#{port}")
+        MailTools::Result.new(msg, :qmqp, MailTools::ERRORS[1], e.to_s, "#{ip}:#{port}")
       end
     end
 
     # Returns the configured QMQP server ip address
     def qmqp_server(i=0)
-      dir = @msg.options[:mail_tools_dir] || MailTools::Config.mail_tools_dir
+      return @options[:qmqp_server] if @options[:qmqp_server]
+      dir = @options[:dir] || '/var/qmail'
       filename = "#{dir}/control/qmqpservers"
       return '127.0.0.1' unless File.exists?(filename)
       File.readlines(filename)[i].chomp

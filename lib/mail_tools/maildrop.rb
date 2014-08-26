@@ -17,7 +17,7 @@ module MailTools
   #    Message Data (RFC822 Headers and Bodies)
   #
   class Maildrop
-    
+
     def self.deliver(mail_tools_message, dir)
       MailTools::Maildrop.new(dir).deliver(mail_tools_message)
     end
@@ -49,7 +49,7 @@ module MailTools
     #
     def receive
       Dir.new(@dir).each do |filename|
-        if filename =~ /\A\w/ # Not a . or .. 
+        if filename =~ /\A\w/ # Not a . or ..
           path = @dir + File::SEPARATOR + filename
           m = MailTools::Maildrop.mailfile(path)
 
