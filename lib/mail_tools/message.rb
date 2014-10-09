@@ -91,6 +91,11 @@ module MailTools
       remove_bcc_header
     end
 
+    def header(name)
+      name = name.downcase.gsub(/\W/, '_').to_sym unless name.is_a?(Symbol)
+      message_headers[name]
+    end
+
     def message_headers
       head, _   = self.message.split(/\n\s*\n/,2)
       headlines = head.split(/\n(?=\w)/s)

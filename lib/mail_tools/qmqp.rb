@@ -26,8 +26,8 @@ module MailTools
     def deliver(mail_tools_message=nil)
       msg    = mail_tools_message if mail_tools_message
       begin
-        ip     = msg.options[:ip]   || qmqp_server
-        port   = msg.options[:port] || MailTools::Config.qmqp_port
+        ip     = @options[:ip]   || qmqp_server
+        port   = @options[:port] || MailTools::Config.qmqp_port
         socket = TCPSocket.new(ip, port)
         if socket
           socket.send(msg.to_netstring, 0)

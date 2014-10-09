@@ -1,14 +1,32 @@
+require 'securerandom'
+
 module MailTools
   class Result
-    attr_accessor :message, :exit_code, :qp, :response, :method, :info
+    attr_accessor :id, :timestamp, :message, :exit_code, :qp, :response, :method, :info
 
     def initialize(mail_tools_message, method, exit_code, response=nil, *info)
+      self.id        = SecureRandom.uuid
+      self.timestamp = Time.new
       self.message   = mail_tools_message
       self.exit_code = exit_code
       self.response  = response
       self.method    = method
       self.info      = info
       self.log
+    end
+
+    def to_hash
+      { request_id:      self.id,
+        timestamp:       self.timestamp,
+        return_path:     self.message.return_path,
+        recipients:      self.message.recipients.count,
+        first_recipient: self.message.recipients.first,
+        size:            self.message.message.size,
+        subject:         self.message.header(:subject),
+        success:         self.exit_code == 0 ? 1 : 0,
+        response:        self.response,
+        method:          self.method,
+      }
     end
 
     # Helper to check result status if you have a Result or other value
@@ -34,10 +52,13 @@ module MailTools
 
     # "23:Kok 1182362995 qp 21894," (if it's a netstring)
     def response=(r)
-      @response = r = MailTools::Netstring.decode(r||"")
-      return if response.nil? || response == ""
+      @raw_response = r
+      @response = MailTools::Netstring.decode(r||"")
+      @response = @response.first if @response.is_a?(Array)
+      return @response if @response.nil? || @response == ""
 
-      if m = r.to_s.match(/\A\d+:([KZD]) (.+) qp (.+)/i)
+      # Kok 1412877119 qp 44150
+      if m = r.to_s.match(/\A([KZD])\S+ (.+) qp (.+)/i)
         @qp = m[3]
         self.exit_code = MailTools::DELIVERY_STATUS.fetch(m[1].downcase) { MailTools::EXIT_ERROR.first }
       end
