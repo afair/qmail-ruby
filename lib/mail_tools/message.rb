@@ -34,10 +34,11 @@ module MailTools
       self.message     = args.shift || ''
       self.return_path = args.shift || ''
       self.recipients  = args.flatten
-      read_message(options[:mailhandle])            if options[:mailhandle]
-      load_mailfile(options[:mailfile])             if options[:mailfile]
-      self.recipient_file(options[:recipient_file]) if options[:recipient_file]
-      use_headers                                   if options[:headers]
+      self.message = File.read(options[:message_file]) if options[:message_file]
+      read_message(options[:mailhandle])               if options[:mailhandle]
+      load_mailfile(options[:mailfile])                if options[:mailfile]
+      self.recipient_file(options[:recipient_file])    if options[:recipient_file]
+      use_headers                                      if options[:headers]
     end
 
     # Reads a message from a file, uses From/To headers for return path and recipients.
@@ -134,7 +135,7 @@ module MailTools
 
     def recipient_file(filename)
       File.readlines(filename).each do |rec|
-        self.recipients.push($1) if rec =~ /\A\s*(\S+@\S)/
+        self.recipients.push($1) if rec =~ /\A\s*<?(.+?@[^\s,]+)/
       end
     end
 
