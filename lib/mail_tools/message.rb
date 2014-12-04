@@ -74,6 +74,10 @@ module MailTools
       self.options     = m.options
     end
 
+    def save_mailfile(filename)
+      MailTools::Maildrop.new.save_mailfile(self, filename)
+    end
+
     def use_headers(replace_headers=true)
       h = message_headers
       if !self.return_path || self.return_path.empty? || replace_headers

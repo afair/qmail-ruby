@@ -26,7 +26,7 @@ module MailTools
       MailTools::Maildrop.new(dir).receive
     end
 
-    def initialize(dir)
+    def initialize(dir=nil)
       dir ||= ENV['MAILDROP_DIR']
       raise "MailTools::Maildrop directory #{dir} does not exist" if !dir || !Dir.exists?(dir)
       @dir = dir
